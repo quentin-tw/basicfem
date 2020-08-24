@@ -1,0 +1,10 @@
+__pycache__/
+
+# All working folders
+working*/
+
+# Data output
+*.txt
+
+# Other reference files
+reference_files/
