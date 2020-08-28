@@ -1,29 +1,25 @@
 import numpy as np
 import pandas as pd
-from abc import ABCMeta, abstractmethod
 
+class TrussInput:
+    """The object representing the input data of the structure to be solved. 
 
-class SolverInput(metaclass=ABCMeta):
-    """The object representing the input data of the structure to be solved.
-
-    This is a abstract class that cannot be instantiated, served as a base class
-    for all the specific input class.
+    *** Now supports 2D truss structures only. 3D truss, beams and 2D elements
+        under constructions.
+        Accepts input data via an excel file only. Additional interface under
+        construction.
 
     Parameters
     ----------
     filename: The name of the input file containing struture's data.
 
+    problem_type : The type of structure to be solved.
+        'truss' : 2D or 3D truss problems.
+        'frame' : 2D or 3D frame problems.
+        'planar' : Problem of 2D elements.
+
     Attributes
     ----------
-
-    node_per_element: Number of node per element.
-
-    dof : Degree of freedoms of nodes.
-
-    num_of_nodes : total number of nodes of the structure.
-
-    num_of_elements : total number of elements of the structure.
-
     nodal_data : an array containing the nodal labels and nodal coordinates. 
                  The structure is as follows:
                  1st column : node labels
@@ -66,6 +62,14 @@ class SolverInput(metaclass=ABCMeta):
                 1st column : material labels corresponds to array 'properties'
                 2nd column : Young's modulus
                 3rd column : Density of the material
+    
+    node_per_element: Number of node per element. 2 for truss and frame problems.
+
+    dof : Degree of freedoms of nodes.
+
+    num_of_nodes : total number of nodes of the structure.
+
+    num_of_elements : total number of elements of the structure.
 
     Method
     ----------
@@ -74,28 +78,13 @@ class SolverInput(metaclass=ABCMeta):
     
     """
     
-    def __init__(self, filename):
-        self._read_excel_input(filename)
-        
-        @property
-        @abstractmethod
-        def node_per_element(self):
-            pass
-
-        @property
-        @abstractmethod
-        def dof(self):
-            pass
-
-        @property
-        @abstractmethod
-        def num_of_nodes(self):
-            pass
-
-        @property
-        @abstractmethod
-        def num_of_elements(self):
-            pass
+    def __init__(self, filename, problem_type):
+        if problem_type == 'truss':
+            self._read_excel_input(filename)
+            self.node_per_element = 2
+            self.dof = self.nodal_data.shape[1]-1
+            self.num_of_nodes = self.nodal_data.shape[0]
+            self.num_of_elements = self.element_data.shape[0]
 
     def _read_excel_input(self, filename):
         """get input data of the structure from a excel file."""
@@ -109,55 +98,12 @@ class SolverInput(metaclass=ABCMeta):
         self.properties = pd.read_excel(filename, sheet_name = 'P' ).values
         self.materials = pd.read_excel(filename, sheet_name = 'M').values
 
-    @abstractmethod
     def get_element_property(self, property_type, element_num, is_label=False):
-        """ Returns the property of a single elements 
-            
+        """Returns the property of a single elements
+        
             parameters
             ----------
             property_type: a string that indicates the property to return.
-            element.
-
-            element_num : an integer indicates the index or the label of 
-                          the element. 
-
-            is_label : a boolean indicates if the variable 'element_num' is a
-                       label. If it is true, the function will search for the
-                       element property using the element's label. If it is 
-                       false, the function will search for the element property
-                       using the index of the array 'element_data'.
-                       The default is false.     
-        
-        """
-        
-        pass
-
-
-class TrussInput2D(SolverInput):
-    """ TrussInput object represents input data for truss structures.
-
-    See SolverInput class for more descriptions on parameters and attributes. 
-
-
-
-    Method
-    ----------
-    get_element_property(property_type, element_num, is_label=False)                                    
-        returns the property of a single elements.
-    
-    """
-    
-    def __init__(self, filename):
-        SolverInput.__init__(self, filename)
-        self._read_excel_input(filename)
-        self.node_per_element = 2
-        self.dof = self.nodal_data.shape[1]-1
-        self.num_of_nodes = self.nodal_data.shape[0]
-        self.num_of_elements = self.element_data.shape[0]
-
-    def get_element_property(self, property_type, element_num, is_label=False):
-        """
-            property_type:
                            'A' : area
                            'E' : Young's modulus
                            'I' : moment of inertia
@@ -167,7 +113,17 @@ class TrussInput2D(SolverInput):
                            'L' : element length
                            'dcos' : directional cosine values of the element
                            'node_ind' : indicies in the array 'nodal_data'
-                                        corresponding to the element   
+                                        corresponding to the element
+
+            element_num : an integer indicates the index or the label of 
+                          the element. 
+
+            is_label : a boolean indicates if the variable 'element_num' is a
+                       label. If it is true, the function will search for the
+                       element property using the element's label. If it is 
+                       false, the function will search for the element property
+                       using the index of the array 'element_data'.
+                       The default is false.          
         
         """
 
@@ -207,7 +163,7 @@ class TrussInput2D(SolverInput):
             self.element_data[element_num,2]).item(0)
         
         if property_type == 'node_ind':
-            return [node1_index, node2_index]
+            return (node1_index, node2_index)
 
         length = 0
         for i in range(1, self.nodal_data.shape[1]):
@@ -228,3 +184,4 @@ class TrussInput2D(SolverInput):
                 cz = (self.nodal_data[node2_index,3] 
                       - self.nodal_data[node1_index,3]) / length
             return np.array([cx,cy,cz])
+    
