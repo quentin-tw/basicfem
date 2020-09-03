@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+from pandas import read_excel
 from abc import ABCMeta, abstractmethod
 
 
@@ -100,14 +100,14 @@ class SolverInput(metaclass=ABCMeta):
     def _read_excel_input(self, filename):
         """get input data of the structure from a excel file."""
 
-        self.nodal_data = pd.read_excel(filename, sheet_name = 'N').values
-        self.element_data = pd.read_excel(filename, sheet_name = 'E').values
-        self.bound_con = pd.read_excel(filename, sheet_name = 'BC').values
+        self.nodal_data = read_excel(filename, sheet_name = 'N').values
+        self.element_data = read_excel(filename, sheet_name = 'E').values
+        self.bound_con = read_excel(filename, sheet_name = 'BC').values
         self.bound_con_nonhomo = \
-            pd.read_excel(filename, sheet_name = 'BC_NH').values
-        self.nodal_forces = pd.read_excel(filename, sheet_name = 'F').values
-        self.properties = pd.read_excel(filename, sheet_name = 'P' ).values
-        self.materials = pd.read_excel(filename, sheet_name = 'M').values
+            read_excel(filename, sheet_name = 'BC_NH').values
+        self.nodal_forces = read_excel(filename, sheet_name = 'F').values
+        self.properties = read_excel(filename, sheet_name = 'P' ).values
+        self.materials = read_excel(filename, sheet_name = 'M').values
 
     @abstractmethod
     def get_element_property(self, property_type, element_num, is_label=False):
@@ -129,7 +129,6 @@ class SolverInput(metaclass=ABCMeta):
                        The default is false.     
         
         """
-        
         pass
 
 
@@ -137,8 +136,6 @@ class TrussInput2D(SolverInput):
     """ TrussInput object represents input data for truss structures.
 
     See SolverInput class for more descriptions on parameters and attributes. 
-
-
 
     Method
     ----------
@@ -151,7 +148,7 @@ class TrussInput2D(SolverInput):
         SolverInput.__init__(self, filename)
         self._read_excel_input(filename)
         self.node_per_element = 2
-        self.dof = self.nodal_data.shape[1]-1
+        self.dof = self.bound_con.shape[1]-1
         self.num_of_nodes = self.nodal_data.shape[0]
         self.num_of_elements = self.element_data.shape[0]
 
@@ -168,7 +165,6 @@ class TrussInput2D(SolverInput):
                            'dcos' : directional cosine values of the element
                            'node_ind' : indicies in the array 'nodal_data'
                                         corresponding to the element   
-        
         """
 
         if is_label:
@@ -222,7 +218,7 @@ class TrussInput2D(SolverInput):
                   - self.nodal_data[node1_index,1]) / length
             cy = (self.nodal_data[node2_index,2]
                   - self.nodal_data[node1_index,2]) / length
-            if self.dof == 2:
+            if self.nodal_data.shape[1] - 1 == 2: # 2D
                 cz = 0
             else:
                 cz = (self.nodal_data[node2_index,3] 

@@ -8,3 +8,6 @@ working*/
 
 # Other reference files
 reference_files/
+
+# Temprary excel files
+~$*

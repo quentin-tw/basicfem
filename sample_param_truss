@@ -1,0 +1,9 @@
+problem_type = truss
+
+generate_deformed_shape_plot = true
+
+deformation_magnification_factor = 1.5
+
+generate_displacements_file = true
+
+displacements_file_name = truss_displacement.txt
