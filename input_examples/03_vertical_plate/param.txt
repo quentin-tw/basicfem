@@ -1,0 +1,5 @@
+problem_type = 2d
+
+deformation_scale_factor = 5.0
+
+contour_over_deformed_mesh = true

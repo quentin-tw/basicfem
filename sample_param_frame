@@ -1,9 +1,0 @@
-problem_type = frame
-
-generate_deformed_shape_plot = true
-
-deformation_magnification_factor = 50
-
-generate_displacements_file = true
-
-displacements_file_name = frame_displacement.txt

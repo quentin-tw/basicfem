@@ -1,0 +1,2 @@
+problem_type	= frame
+deformation_scale_factor	= 50

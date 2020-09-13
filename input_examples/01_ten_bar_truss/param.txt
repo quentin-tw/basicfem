@@ -1,0 +1,2 @@
+problem_type	= truss
+deformation_scale_factor	= 1

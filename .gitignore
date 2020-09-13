@@ -3,11 +3,14 @@ __pycache__/
 # All working folders
 working*/
 
-# Data output
-*.txt
-
 # Other reference files
 reference_files/
 
 # Temprary excel files
 ~$*
+
+# Test files
+test_*
+
+# vscode files
+.vscode
