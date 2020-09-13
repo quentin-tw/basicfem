@@ -13,7 +13,7 @@ Quick Start
 A simple example of vertical 2D plate under a point load is as follows.
 
 .. image:: ./input_examples/03_vertical_plate/config_pic.png
-    :width: 400
+    :width: 200
 
 After cloning the project in the local directory, try input files in the
 **input_examples** folder. The command line usage is 
