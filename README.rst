@@ -28,7 +28,7 @@ After the solver completes the input processing, contour plots and data can be
 found in put directory. For this example we have ``deformation_scale_factor = 5``,
 which can be changed in the param.txt file of the input folder.
 
-.. image:: ./output_example/03_vertical_plate/contour_plot_sigma_yy.png
+.. image:: ./output_examples/03_vertical_plate/contour_plot_sigma_yy.png
     :width: 400
 
 We can also use an .xlsx file to replace the input directory as follows ::
