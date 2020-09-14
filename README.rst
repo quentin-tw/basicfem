@@ -7,6 +7,10 @@ a xlsx file, For 2D general structures, the input mesh can be generated
 from the Gmsh software (https://gmsh.info/). The mshreader.py can then be used 
 to convert .msh file into basicfem input format.
 
+
+**Documentation:**
+https://basicfem.readthedocs.io
+
 Quick Start
 -----------
 
