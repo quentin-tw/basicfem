@@ -1,0 +1,452 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.output_utility &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.output_utility</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Utility functions for finite element analysis result output. &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.collections</span>
+
+<div class="viewcode-block" id="save_data"><a class="viewcode-back" href="../../source_rst/lib.html#lib.output_utility.save_data">[docs]</a><span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">dir_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A wrapper function for numpy.savetxt to store an array in a txt file. </span>
+<span class="sd">    </span>
+<span class="sd">    parameter</span>
+<span class="sd">    ---------</span>
+<span class="sd">    matrix : numpy.ndarray</span>
+<span class="sd">        The numpy array to be saved into txt file.</span>
+<span class="sd">    filename : str</span>
+<span class="sd">        The filename for the txt file.</span>
+<span class="sd">    dir_name : str</span>
+<span class="sd">        The name of the directory to save the txt file. Only name is needed.</span>
+<span class="sd">        Example:</span>
+<span class="sd">        frame_output</span>
+<span class="sd">        frame_output/frame_data</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">dir_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">array</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%13.6e</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="s1">&#39;./&#39;</span> <span class="o">+</span> <span class="n">dir_name</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">filename</span><span class="p">,</span> <span class="n">array</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%13.6e</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="plot_deformed_shape_1D"><a class="viewcode-back" href="../../source_rst/lib.html#lib.output_utility.plot_deformed_shape_1D">[docs]</a><span class="k">def</span> <span class="nf">plot_deformed_shape_1D</span><span class="p">(</span><span class="n">fem_result</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">output_dir_path</span><span class="p">,</span> 
+                           <span class="n">has_original_shape</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Plot the deformed shape of the 1D element structures (truss and frames).</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fem_result : BaseSolver</span>
+<span class="sd">        A Solver object contains the analysis result.</span>
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        The deformation scale factor assigned in the param.</span>
+<span class="sd">    output_dir_path : str</span>
+<span class="sd">        The path to the output directory.</span>
+<span class="sd">    has_original_shape : bool</span>
+<span class="sd">        If True, the undeformed shape will also be plotted on the same figure.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">interpolated_data</span> <span class="o">=</span> <span class="n">fem_result</span><span class="o">.</span><span class="n">interpolate_shape</span><span class="p">(</span><span class="n">scale_factor</span><span class="p">)</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">has_original_shape</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">):</span>
+            <span class="n">_plot_undeformed_element</span><span class="p">(</span><span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="s1">&#39;k-&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">):</span>
+        <span class="n">_plot_deformed_element</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">interpolated_data</span><span class="p">[</span><span class="n">i</span><span class="p">,:,:])</span>
+
+    <span class="n">myAxSetting</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;xlabel&#39;</span> <span class="p">:</span> <span class="s1">&#39;X&#39;</span><span class="p">,</span>  
+        <span class="s1">&#39;ylabel&#39;</span> <span class="p">:</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aspect&#39;</span> <span class="p">:</span> <span class="s1">&#39;equal&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;title&#39;</span> <span class="p">:</span> 
+        <span class="s1">&#39;Deformed Shape (Red), Scale Factor : </span><span class="si">{:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">scale_factor</span><span class="p">),</span>
+    <span class="p">}</span>   
+    <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="o">**</span><span class="n">myAxSetting</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/deformaion_plot.png&#39;</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">_plot_undeformed_element</span><span class="p">(</span><span class="n">sol_in</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">line_str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Plot a single undeformed 1D element. </span>
+
+<span class="sd">    A helper function for plot_deformed_shape_1D.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sol_in : SolverInput</span>
+<span class="sd">        An SolverInput object contains all input data.</span>
+<span class="sd">    element_index : int</span>
+<span class="sd">        The index points to a SolverInput.element_data row.</span>
+<span class="sd">    ax : matplotlib.axes._subplots.AxesSubplot</span>
+<span class="sd">        A matplotlib axes object to be plotted.</span>
+<span class="sd">    line_str : str</span>
+<span class="sd">        A string specified the line or point plotting style for the element.</span>
+<span class="sd">        Example:</span>
+<span class="sd">        &#39;k-&#39;</span>
+<span class="sd">        &#39;r--&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nodal_data</span> <span class="o">=</span> <span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span>
+
+
+    <span class="p">(</span><span class="n">node1_index</span><span class="p">,</span> <span class="n">node2_index</span><span class="p">)</span> <span class="o">=</span> <span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;node_ind&#39;</span><span class="p">,</span> 
+                                                          <span class="n">element_index</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node1_index</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">nodal_data</span><span class="p">[</span><span class="n">node2_index</span><span class="p">,</span><span class="mi">1</span><span class="p">]]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node1_index</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="n">nodal_data</span><span class="p">[</span><span class="n">node2_index</span><span class="p">,</span><span class="mi">2</span><span class="p">]]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">line_str</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_plot_deformed_element</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">lineStr</span><span class="p">,</span> <span class="n">element_interpolated_data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Plot a single deformed 1D element. </span>
+
+<span class="sd">    A helper function for plot_deformed_shape_1D.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes._subplots.AxesSubplot</span>
+<span class="sd">        A matplotlib subplot axes object to be plotted.</span>
+<span class="sd">    line_str : str</span>
+<span class="sd">        A string specified the line or point plotting style for the element.</span>
+<span class="sd">        Example:</span>
+<span class="sd">        &#39;k-&#39;</span>
+<span class="sd">        &#39;r--&#39;</span>
+<span class="sd">    element_interpolated_data : numpy.ndarray</span>
+<span class="sd">        The interpolated coordinated data inside an element. Note that </span>
+<span class="sd">        interpolation only applied in frame structure, since truss structure</span>
+<span class="sd">        will only subject to axial forces.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">element_interpolated_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">element_interpolated_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">lineStr</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_polycollection_plot</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">elements</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> 
+                        <span class="n">title_string</span><span class="p">,</span> <span class="n">output_dir_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generate the contour plot by matplotlib&#39;s polycollection class.</span>
+
+<span class="sd">    A helper function for plot_countour.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nodes : numpy.ndarray</span>
+<span class="sd">        The array of nodal coordinates, which is the nodal_data without</span>
+<span class="sd">        nodal labels.</span>
+<span class="sd">    elements : numpy.ndarray</span>
+<span class="sd">        The array of nodal index groups of elements, which is the element_data</span>
+<span class="sd">        without the element label and the property label, and adjust the nodal</span>
+<span class="sd">        label to nodal index.</span>
+<span class="sd">    values : numpy.ndarray</span>
+<span class="sd">        The array of values correspond with each value corresponds to an </span>
+<span class="sd">        elements.</span>
+<span class="sd">    title_string : str</span>
+<span class="sd">        A string to be show as the title of the plot</span>
+<span class="sd">    output_dir_path : str</span>
+<span class="sd">        The path to the output directory.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">y</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">quatplot</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span> <span class="n">quatrangles</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">yz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">]</span> 
+        <span class="n">verts</span><span class="o">=</span> <span class="n">yz</span><span class="p">[</span><span class="n">quatrangles</span><span class="p">]</span>
+        <span class="n">pc</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">collections</span><span class="o">.</span><span class="n">PolyCollection</span><span class="p">(</span><span class="n">verts</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">pc</span><span class="o">.</span><span class="n">set_array</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">add_collection</span><span class="p">(</span><span class="n">pc</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">autoscale</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">pc</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+
+    <span class="n">pc</span> <span class="o">=</span> <span class="n">quatplot</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">elements</span><span class="p">),</span> <span class="n">values</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> 
+            <span class="n">edgecolor</span><span class="o">=</span><span class="s2">&quot;crimson&quot;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;rainbow&quot;</span><span class="p">,</span><span class="n">linewidths</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">v1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">values</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">7</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">cbar</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">ticks</span> <span class="o">=</span> <span class="n">v1</span><span class="p">)</span>
+    <span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">270</span><span class="p">)</span>     
+    <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title_string</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/contour_plot_&#39;</span> <span class="o">+</span> <span class="n">title_string</span> <span class="o">+</span> <span class="s1">&#39;.png&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="plot_contour"><a class="viewcode-back" href="../../source_rst/lib.html#lib.output_utility.plot_contour">[docs]</a><span class="k">def</span> <span class="nf">plot_contour</span><span class="p">(</span><span class="n">fem_result</span><span class="p">,</span> <span class="n">value_type</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">title_string</span><span class="p">,</span> 
+                    <span class="n">scale_factor</span><span class="p">,</span> <span class="n">output_dir_path</span><span class="p">,</span> <span class="n">plot_on_deformed</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generate the contour plot of given values for 2D elements.</span>
+
+<span class="sd">    The contour can be plotted on the deformed grid or undeformed grid. Only a</span>
+<span class="sd">    single color is assigned to an element.</span>
+
+<span class="sd">    Note that currenly the nodal labeling must starts from 1 and </span>
+<span class="sd">    increment continuously for the given strucuture, which is generally</span>
+<span class="sd">    satisfied by the msh file provided by the Gmsh software.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fem_result : BaseSolver</span>
+<span class="sd">        A Solver object contains the analysis result.</span>
+<span class="sd">    value_type : str</span>
+<span class="sd">        A string that designated the type of value to be plotted. Currently </span>
+<span class="sd">        accepts either &#39;stress&#39; or &#39;strain&#39;.</span>
+<span class="sd">    direction : str</span>
+<span class="sd">        A string designate the direction of the stress or strain tensor. </span>
+<span class="sd">        Currently accepts &#39;xx&#39;, &#39;yy&#39;, or &#39;xy&#39; </span>
+<span class="sd">    title_string : str</span>
+<span class="sd">        A string to be show as the title of the plot</span>
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        The deformation scale factor assigned in the param.        </span>
+<span class="sd">    output_dir_path : str</span>
+<span class="sd">        The path to the output directory.</span>
+<span class="sd">    plot_on_deformed : bool</span>
+<span class="sd">        Flag that determines if the contour is plotted on the deformed</span>
+<span class="sd">        structures. Default is True.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">num_nodes</span> <span class="o">=</span> <span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">node_per_element</span>
+    <span class="k">if</span> <span class="n">plot_on_deformed</span><span class="p">:</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">_shift_nodal_coord</span><span class="p">(</span><span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">,</span> 
+                                <span class="n">fem_result</span><span class="o">.</span><span class="n">displacements</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+    <span class="c1"># the corresponding nodes (nodal indices) for each elements</span>
+    <span class="c1"># assume that nodal labels start from one and are in sequence</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">fem_result</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">element_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="n">num_nodes</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">elements</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;xx&#39;</span><span class="p">:</span>
+        <span class="n">dir_ind</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;yy&#39;</span><span class="p">:</span>
+        <span class="n">dir_ind</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">direction</span> <span class="o">==</span> <span class="s1">&#39;xy&#39;</span><span class="p">:</span>
+        <span class="n">dir_ind</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;invalid direction label, xx is used&quot;</span><span class="p">)</span>
+        <span class="n">dir_ind</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="n">value_type</span> <span class="o">==</span> <span class="s1">&#39;stress&#39;</span><span class="p">:</span>
+        <span class="n">elementVal</span> <span class="o">=</span> <span class="n">fem_result</span><span class="o">.</span><span class="n">stress</span><span class="p">[:,</span> <span class="n">dir_ind</span><span class="p">]</span>
+
+    <span class="k">elif</span> <span class="n">value_type</span> <span class="o">==</span> <span class="s1">&#39;strain&#39;</span><span class="p">:</span>
+        <span class="n">elementVal</span> <span class="o">=</span> <span class="n">fem_result</span><span class="o">.</span><span class="n">strain</span><span class="p">[:,</span> <span class="n">dir_ind</span><span class="p">]</span>  
+    
+    <span class="n">_polycollection_plot</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">elements</span><span class="p">,</span> <span class="n">elementVal</span><span class="p">,</span> 
+                         <span class="n">title_string</span><span class="p">,</span> <span class="n">output_dir_path</span><span class="p">)</span></div>
+    
+<span class="k">def</span> <span class="nf">_show_overlap</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">nodes2</span><span class="p">,</span> <span class="n">elements</span><span class="p">,</span> <span class="n">titleStr</span><span class="p">,</span> <span class="n">output_dir_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Generate the grid plot of both deformed and undeformed shape </span>
+<span class="sd">    by matplotlib&#39;s polycollection class. A helper function for </span>
+<span class="sd">    plot_deformation_shape_2D.</span>
+
+<span class="sd">    The function is similar to _polycollection_plot, the difference is that </span>
+<span class="sd">    the grid is not filled with colors, and both deformed and undeformed grid</span>
+<span class="sd">    are plotted together in the figure.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    nodes : numpy.ndarray</span>
+<span class="sd">        The array of nodal coordinates of undeformed shape, which is </span>
+<span class="sd">        the nodal_data without nodal labels.</span>
+<span class="sd">    nodes2 : numpy.ndarray</span>
+<span class="sd">        The array of nodal coordinates of deformed shape, which is the </span>
+<span class="sd">        nodal_data without nodal labels, and add the effect of deformation and</span>
+<span class="sd">        scale factor.</span>
+<span class="sd">    elements : numpy.ndarray</span>
+<span class="sd">        The array of nodal index groups of elements, which is the element_data</span>
+<span class="sd">        without the element label and the property label, and adjust the nodal</span>
+<span class="sd">        label to nodal index.</span>
+<span class="sd">    title_string : str</span>
+<span class="sd">        A string to be show as the title of the plot</span>
+<span class="sd">    output_dir_path : str</span>
+<span class="sd">        The path to the output directory.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">nodes2</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">z2</span> <span class="o">=</span> <span class="n">nodes2</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">quatplot</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span><span class="n">y2</span><span class="p">,</span><span class="n">z2</span><span class="p">,</span> <span class="n">quatrangles</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">yz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">]</span> 
+        <span class="n">yz2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">y2</span><span class="p">,</span><span class="n">z2</span><span class="p">]</span>
+        <span class="n">verts</span><span class="o">=</span> <span class="n">yz</span><span class="p">[</span><span class="n">quatrangles</span><span class="p">]</span>
+        <span class="n">verts2</span><span class="o">=</span> <span class="n">yz2</span><span class="p">[</span><span class="n">quatrangles</span><span class="p">]</span>
+        <span class="n">pc</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">collections</span><span class="o">.</span><span class="n">PolyCollection</span><span class="p">(</span><span class="n">verts</span><span class="p">,</span> 
+        <span class="n">facecolors</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">edgecolors</span> <span class="o">=</span> <span class="s1">&#39;k&#39;</span><span class="p">,</span><span class="n">linewidths</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">pc2</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">collections</span><span class="o">.</span><span class="n">PolyCollection</span><span class="p">(</span><span class="n">verts2</span><span class="p">,</span> 
+        <span class="n">facecolors</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">edgecolors</span> <span class="o">=</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">linewidths</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">add_collection</span><span class="p">(</span><span class="n">pc</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">add_collection</span><span class="p">(</span><span class="n">pc2</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">autoscale</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">pc2</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+    <span class="n">pc2</span> <span class="o">=</span> <span class="n">quatplot</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span><span class="n">y2</span><span class="p">,</span><span class="n">z2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">elements</span><span class="p">),</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span> 
+    <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">titleStr</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s1">&#39;Y&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/deformaion_plot.png&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="plot_deformation_shape_2D"><a class="viewcode-back" href="../../source_rst/lib.html#lib.output_utility.plot_deformation_shape_2D">[docs]</a><span class="k">def</span> <span class="nf">plot_deformation_shape_2D</span><span class="p">(</span><span class="n">nodal_data</span><span class="p">,</span> <span class="n">element_data</span><span class="p">,</span> 
+        <span class="n">displacements</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">,</span> <span class="n">output_dir_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generate deformation plot for general 2d elements.</span>
+<span class="sd">    </span>
+<span class="sd">    The undeformed shape will also be superimposed on the figure.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameter</span>
+<span class="sd">    ---------</span>
+<span class="sd">    nodal_data : numpy.array</span>
+<span class="sd">        the nodal_data from the SolverInput object</span>
+<span class="sd">    element_data : numpy.array</span>
+<span class="sd">        the element_data from the SolverInput object</span>
+<span class="sd">    displacements : numpy.array</span>
+<span class="sd">        the displacements from the BaseSolver object  </span>
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        The deformation scale factor assigned in the param.</span>
+<span class="sd">    output_dir_path : str</span>
+<span class="sd">        The path to the output directory.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">numOfNodes</span> <span class="o">=</span> <span class="n">element_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span>
+    <span class="n">nodes</span> <span class="o">=</span> <span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> 
+    <span class="n">nodes_new</span> <span class="o">=</span> <span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">disp_m</span> <span class="o">=</span> <span class="n">displacements</span> <span class="o">*</span> <span class="n">scale_factor</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="n">nodes_new</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">disp_m</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">nodes_new</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">disp_m</span><span class="p">[</span><span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># the corresponding nodes (nodal indices) for each elements</span>
+    <span class="c1"># assume that nodal labels start from one and are in sequence</span>
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">element_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="n">numOfNodes</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> 
+    <span class="n">elements</span> <span class="o">=</span> <span class="n">elements</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">_show_overlap</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">nodes_new</span><span class="p">,</span> <span class="n">elements</span><span class="p">,</span><span class="s2">&quot;deformed shape plot&quot;</span><span class="p">,</span> 
+                        <span class="n">output_dir_path</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">_shift_nodal_coord</span><span class="p">(</span><span class="n">nodal_data</span><span class="p">,</span> <span class="n">displacements</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return the nodal coordinates after deformation.</span>
+
+<span class="sd">    A helper function for plot_countour.</span>
+
+<span class="sd">    Parameter</span>
+<span class="sd">    ---------</span>
+<span class="sd">    nodal_data : numpy.array</span>
+<span class="sd">        the nodal_data from the SolverInput object</span>
+<span class="sd">    displacements : numpy.array</span>
+<span class="sd">        the displacements from the BaseSolver object  </span>
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        The deformation scale factor assigned in the param.</span>
+<span class="sd">    </span>
+<span class="sd">    Return</span>
+<span class="sd">    ------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        An array that contains the shifted coordinate by the deformation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shifted_nodal_coord</span> <span class="o">=</span> <span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">scaled_disp</span> <span class="o">=</span> <span class="n">displacements</span> <span class="o">*</span> <span class="n">scale_factor</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="n">shifted_nodal_coord</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">scaled_disp</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">i</span><span class="p">]</span>
+        <span class="n">shifted_nodal_coord</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">scaled_disp</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">shifted_nodal_coord</span>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/basicfem.html">basicfem – main script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/lib.html">lib – library for basicfem solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/mshreader.html">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>basicfem – main script &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="lib – library for basicfem solver" href="lib.html" />
+    <link rel="prev" title="Basicfem Documentation" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-basicfem">
+<span id="basicfem-main-script"></span><h1>basicfem – main script<a class="headerlink" href="#module-basicfem" title="Permalink to this headline">¶</a></h1>
+<p>basicfem.py is the main script to execute the Basicfem solver.</p>
+<dl class="function">
+<dt id="basicfem.main">
+<code class="sig-prename descclassname">basicfem.</code><code class="sig-name descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/basicfem.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#basicfem.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main function to read in command line input, processing directories and
+run respective solvers. The script takes two argument – an input directory
+name and an output directory name. The input directory should locate in the
+local directory and needs to contain necessary txt files for basicfem
+solvers. It can also be an xlsx file that contains all the required input.
+The output directory will be generated if not exists, or being overwritten.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="basicfem.plot_contour_batch">
+<code class="sig-prename descclassname">basicfem.</code><code class="sig-name descname">plot_contour_batch</code><span class="sig-paren">(</span><em class="sig-param">fem_result</em>, <em class="sig-param">scale_factor</em>, <em class="sig-param">output_path</em>, <em class="sig-param">plot_on_deformed=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/basicfem.html#plot_contour_batch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#basicfem.plot_contour_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate all the contour plot available. Only used for 2d elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fem_result</strong> (<a class="reference internal" href="lib.html#lib.solvers.BaseSolver" title="lib.solvers.BaseSolver"><em>BaseSolver</em></a>) – A Solver object contains the analysis result.</p></li>
+<li><p><strong>scale_factor</strong> (<em>float</em>) – The deformation scale factor assigned in the param.</p></li>
+<li><p><strong>output_path</strong> (<em>str</em>) – The path to the output directory assigned by the user.</p></li>
+<li><p><strong>plot_on_deformed</strong> (<em>bool</em>) – Flag that determines if the contour is plotted on the deformed
+structures. Default is True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="basicfem.read_param">
+<code class="sig-prename descclassname">basicfem.</code><code class="sig-name descname">read_param</code><span class="sig-paren">(</span><em class="sig-param">param_filename</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/basicfem.html#read_param"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#basicfem.read_param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the param file to set the solver related parameters.</p>
+<p>The param file will either be an param.txt file inside the input directory,
+or the Param page inside the input xlsx file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>param_filename</strong> (<em>str</em>) – The xlsx file name, or the processed path to the param.txt file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The dictionary contains solver related paramters.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="basicfem.set_param_guide">
+<code class="sig-prename descclassname">basicfem.</code><code class="sig-name descname">set_param_guide</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/basicfem.html#set_param_guide"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#basicfem.set_param_guide" title="Permalink to this definition">¶</a></dt>
+<dd><p>Command line prompt to guide the users setting up parameters.</p>
+<p>In the case when param file does not exist, this function will guide the
+users to provide the necessary paramters for solver. Note that this guide
+will keep most of the parameters default, only set those that is needed to
+be assigned for solver to run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Parameters necessary for the solver.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">basicfem – main script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lib.html">lib – library for basicfem solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mshreader.html">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">Basicfem Documentation</a></li>
+      <li>Next: <a href="lib.html" title="next chapter">lib – library for basicfem solver</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/source_rst/basicfem.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,811 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib – library for basicfem solver &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="mshreader – interface for reading Gmsh files" href="mshreader.html" />
+    <link rel="prev" title="basicfem – main script" href="basicfem.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="lib-library-for-basicfem-solver">
+<h1>lib – library for basicfem solver<a class="headerlink" href="#lib-library-for-basicfem-solver" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-lib.output_utility">
+<span id="lib-output-utility"></span><h2>lib.output_utility<a class="headerlink" href="#module-lib.output_utility" title="Permalink to this headline">¶</a></h2>
+<p>Utility functions for finite element analysis result output.</p>
+<dl class="function">
+<dt id="lib.output_utility.plot_contour">
+<code class="sig-prename descclassname">lib.output_utility.</code><code class="sig-name descname">plot_contour</code><span class="sig-paren">(</span><em class="sig-param">fem_result</em>, <em class="sig-param">value_type</em>, <em class="sig-param">direction</em>, <em class="sig-param">title_string</em>, <em class="sig-param">scale_factor</em>, <em class="sig-param">output_dir_path</em>, <em class="sig-param">plot_on_deformed=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/output_utility.html#plot_contour"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.output_utility.plot_contour" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the contour plot of given values for 2D elements.</p>
+<p>The contour can be plotted on the deformed grid or undeformed grid. Only a
+single color is assigned to an element.</p>
+<p>Note that currenly the nodal labeling must starts from 1 and
+increment continuously for the given strucuture, which is generally
+satisfied by the msh file provided by the Gmsh software.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fem_result</strong> (<a class="reference internal" href="#lib.solvers.BaseSolver" title="lib.solvers.BaseSolver"><em>BaseSolver</em></a>) – A Solver object contains the analysis result.</p></li>
+<li><p><strong>value_type</strong> (<em>str</em>) – A string that designated the type of value to be plotted. Currently
+accepts either ‘stress’ or ‘strain’.</p></li>
+<li><p><strong>direction</strong> (<em>str</em>) – A string designate the direction of the stress or strain tensor.
+Currently accepts ‘xx’, ‘yy’, or ‘xy’</p></li>
+<li><p><strong>title_string</strong> (<em>str</em>) – A string to be show as the title of the plot</p></li>
+<li><p><strong>scale_factor</strong> (<em>float</em>) – The deformation scale factor assigned in the param.</p></li>
+<li><p><strong>output_dir_path</strong> (<em>str</em>) – The path to the output directory.</p></li>
+<li><p><strong>plot_on_deformed</strong> (<em>bool</em>) – Flag that determines if the contour is plotted on the deformed
+structures. Default is True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.output_utility.plot_deformation_shape_2D">
+<code class="sig-prename descclassname">lib.output_utility.</code><code class="sig-name descname">plot_deformation_shape_2D</code><span class="sig-paren">(</span><em class="sig-param">nodal_data</em>, <em class="sig-param">element_data</em>, <em class="sig-param">displacements</em>, <em class="sig-param">scale_factor</em>, <em class="sig-param">output_dir_path</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/output_utility.html#plot_deformation_shape_2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.output_utility.plot_deformation_shape_2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate deformation plot for general 2d elements.</p>
+<p>The undeformed shape will also be superimposed on the figure.</p>
+<dl class="simple">
+<dt>nodal_data<span class="classifier">numpy.array</span></dt><dd><p>the nodal_data from the SolverInput object</p>
+</dd>
+<dt>element_data<span class="classifier">numpy.array</span></dt><dd><p>the element_data from the SolverInput object</p>
+</dd>
+<dt>displacements<span class="classifier">numpy.array</span></dt><dd><p>the displacements from the BaseSolver object</p>
+</dd>
+<dt>scale_factor<span class="classifier">float</span></dt><dd><p>The deformation scale factor assigned in the param.</p>
+</dd>
+<dt>output_dir_path<span class="classifier">str</span></dt><dd><p>The path to the output directory.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.output_utility.plot_deformed_shape_1D">
+<code class="sig-prename descclassname">lib.output_utility.</code><code class="sig-name descname">plot_deformed_shape_1D</code><span class="sig-paren">(</span><em class="sig-param">fem_result</em>, <em class="sig-param">scale_factor</em>, <em class="sig-param">output_dir_path</em>, <em class="sig-param">has_original_shape=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/output_utility.html#plot_deformed_shape_1D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.output_utility.plot_deformed_shape_1D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the deformed shape of the 1D element structures (truss and frames).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fem_result</strong> (<a class="reference internal" href="#lib.solvers.BaseSolver" title="lib.solvers.BaseSolver"><em>BaseSolver</em></a>) – A Solver object contains the analysis result.</p></li>
+<li><p><strong>scale_factor</strong> (<em>float</em>) – The deformation scale factor assigned in the param.</p></li>
+<li><p><strong>output_dir_path</strong> (<em>str</em>) – The path to the output directory.</p></li>
+<li><p><strong>has_original_shape</strong> (<em>bool</em>) – If True, the undeformed shape will also be plotted on the same figure.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="lib.output_utility.save_data">
+<code class="sig-prename descclassname">lib.output_utility.</code><code class="sig-name descname">save_data</code><span class="sig-paren">(</span><em class="sig-param">array</em>, <em class="sig-param">filename</em>, <em class="sig-param">dir_name=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/output_utility.html#save_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.output_utility.save_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper function for numpy.savetxt to store an array in a txt file.</p>
+<dl class="simple">
+<dt>matrix<span class="classifier">numpy.ndarray</span></dt><dd><p>The numpy array to be saved into txt file.</p>
+</dd>
+<dt>filename<span class="classifier">str</span></dt><dd><p>The filename for the txt file.</p>
+</dd>
+<dt>dir_name<span class="classifier">str</span></dt><dd><p>The name of the directory to save the txt file. Only name is needed.
+Example:
+frame_output
+frame_output/frame_data</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-lib.solver_input">
+<span id="lib-solver-input-module"></span><h2>lib.solver_input module<a class="headerlink" href="#module-lib.solver_input" title="Permalink to this headline">¶</a></h2>
+<p>solver_input module contains classes that represents the input data</p>
+<dl class="class">
+<dt id="lib.solver_input.SolverInput">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solver_input.</code><code class="sig-name descname">SolverInput</code><span class="sig-paren">(</span><em class="sig-param">source_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#SolverInput"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solver_input.SolverInput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>SolverInput is the object representing the input data of the
+structure to be solved.</p>
+<p>This is a abstract class that cannot be instantiated, served as a base
+class for all the specific input data object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>source_name</strong> (<em>str</em>) – The name of the input directory or the input xlsx file
+containing struture’s data.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.node_per_element">
+<code class="sig-name descname">node_per_element</code><a class="headerlink" href="#lib.solver_input.SolverInput.node_per_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of node per element.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.dof">
+<code class="sig-name descname">dof</code><a class="headerlink" href="#lib.solver_input.SolverInput.dof" title="Permalink to this definition">¶</a></dt>
+<dd><p>Degree of freedoms of nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.num_of_nodes">
+<code class="sig-name descname">num_of_nodes</code><a class="headerlink" href="#lib.solver_input.SolverInput.num_of_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Total number of nodes of the structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.num_of_elements">
+<code class="sig-name descname">num_of_elements</code><a class="headerlink" href="#lib.solver_input.SolverInput.num_of_elements" title="Permalink to this definition">¶</a></dt>
+<dd><p>Total number of elements of the structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.nodal_data">
+<code class="sig-name descname">nodal_data</code><a class="headerlink" href="#lib.solver_input.SolverInput.nodal_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>An array containing the nodal labels and nodal coordinates.
+The structure is as follows:</p>
+<p>1st column : node labels</p>
+<p>2nd column : x coordinate of the node</p>
+<p>3rd column : y coordinate of the node</p>
+<p>4th column : z coordinate of the node (if applicable)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.element_data">
+<code class="sig-name descname">element_data</code><a class="headerlink" href="#lib.solver_input.SolverInput.element_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>An array containing the cooresponding nodes and properties
+of the elements. The structure is as follows:</p>
+<p>1st column : element labels</p>
+<p>2nd column : first nodes</p>
+<p>3rd column : second nodes</p>
+<p>4th column : property number (see properties array)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.bound_con">
+<code class="sig-name descname">bound_con</code><a class="headerlink" href="#lib.solver_input.SolverInput.bound_con" title="Permalink to this definition">¶</a></dt>
+<dd><p>an array containing the nodal fixed boundary conditions of
+the problem. The 1st column is the corresponding nodal labels,
+the remaining columns corresponds to conditions in x, y, and
+z coordinates. 1 represents fixed, 0 represents fixed.
+Nodes not included in this array are treated as free nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.bound_con_nonhomo">
+<code class="sig-name descname">bound_con_nonhomo</code><a class="headerlink" href="#lib.solver_input.SolverInput.bound_con_nonhomo" title="Permalink to this definition">¶</a></dt>
+<dd><p>An array containing the non-homogeneous conditions.
+Similar structure as bound_con, except that columns
+corresponding x, y, and z coodinates are the magnitude
+of displacements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.nodal_forces">
+<code class="sig-name descname">nodal_forces</code><a class="headerlink" href="#lib.solver_input.SolverInput.nodal_forces" title="Permalink to this definition">¶</a></dt>
+<dd><p>An array containing the external nodal forces. Similar
+structure as bound_con, except that the columns
+corresponding x, y, and z coordinates are the magnitude of
+displacements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.properties">
+<code class="sig-name descname">properties</code><a class="headerlink" href="#lib.solver_input.SolverInput.properties" title="Permalink to this definition">¶</a></dt>
+<dd><p>an array containing the properties of all elements. The
+structure is as follows:</p>
+<p>1st column : property labels corresponds to array ‘element_data’</p>
+<p>2nd column : material number corresponds to array ‘materials’</p>
+<p>3rd column : cross-sectional area of the cooresponding elements.</p>
+<p>4th column : z Moment of inertia of the corresponding elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solver_input.SolverInput.materials">
+<code class="sig-name descname">materials</code><a class="headerlink" href="#lib.solver_input.SolverInput.materials" title="Permalink to this definition">¶</a></dt>
+<dd><p>an array containing the properties of all elements. The
+structure is as follows:</p>
+<p>1st column : material labels corresponds to array ‘properties’</p>
+<p>2nd column : Young’s modulus</p>
+<p>3rd column : Density of the material</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solver_input.SolverInput.get_element_property">
+<code class="sig-name descname">get_element_property</code><span class="sig-paren">(</span><em class="sig-param">property_type</em>, <em class="sig-param">element_num</em>, <em class="sig-param">is_label=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#SolverInput.get_element_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solver_input.SolverInput.get_element_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the property of a single element.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">abstract </em><code class="sig-name descname">get_element_property</code><span class="sig-paren">(</span><em class="sig-param">property_type</em>, <em class="sig-param">element_num</em>, <em class="sig-param">is_label=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#SolverInput.get_element_property"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the property of a single elements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>property_type</strong> (<em>str</em>) – A string that indicates the property to return.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>element_num<span class="classifier">int</span></dt><dd><p>an integer indicates the index or the label of
+the element.</p>
+</dd>
+<dt>is_label<span class="classifier">bool</span></dt><dd><p>a boolean indicates if the variable ‘element_num’ is a
+label. If it is true, the function will search for the
+element property using the element’s label. If it is
+false, the function will search for the element property
+using the index of the array ‘element_data’.
+The default is false.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.solver_input.TriangularElementInput">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solver_input.</code><code class="sig-name descname">TriangularElementInput</code><span class="sig-paren">(</span><em class="sig-param">filename=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#TriangularElementInput"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solver_input.TriangularElementInput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.solver_input.SolverInput" title="lib.solver_input.SolverInput"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.solver_input.SolverInput</span></code></a></p>
+<dl class="method">
+<dt id="lib.solver_input.TriangularElementInput.get_element_property">
+<code class="sig-name descname">get_element_property</code><span class="sig-paren">(</span><em class="sig-param">property_type</em>, <em class="sig-param">element_num</em>, <em class="sig-param">is_label=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#TriangularElementInput.get_element_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solver_input.TriangularElementInput.get_element_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>See SolverInput for descriptions.</p>
+<p>property_type options:</p>
+<p>‘t’ : thickness</p>
+<p>‘E’ : Young’s modulus</p>
+<p>‘nu’ : poisson’s ratio</p>
+<p>‘node_ind’ : indicies in the array ‘nodal_data’ corresponding
+to the element.</p>
+<p>‘nodal_coord’ : nodal coordinates of the given element.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.solver_input.TrussInput2D">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solver_input.</code><code class="sig-name descname">TrussInput2D</code><span class="sig-paren">(</span><em class="sig-param">filename</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#TrussInput2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solver_input.TrussInput2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.solver_input.SolverInput" title="lib.solver_input.SolverInput"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.solver_input.SolverInput</span></code></a></p>
+<p>TrussInput object represents input data for truss structures.</p>
+<p>See SolverInput class for more descriptions on parameters and attributes.</p>
+<dl class="method">
+<dt id="lib.solver_input.TrussInput2D.get_element_property">
+<code class="sig-name descname">get_element_property</code><span class="sig-paren">(</span><em class="sig-param">property_type</em>, <em class="sig-param">element_num</em>, <em class="sig-param">is_label=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solver_input.html#TrussInput2D.get_element_property"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solver_input.TrussInput2D.get_element_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>See SolverInput for descriptions.</p>
+<p>property_type options:</p>
+<p>‘A’ : area</p>
+<p>‘E’ : Young’s modulus</p>
+<p>‘I’ : moment of inertia</p>
+<p>‘rho’ : material density</p>
+<p>‘Yc’ : compressive yield strength</p>
+<p>‘Yt’ : tensile yield strenth</p>
+<p>‘L’ : element length</p>
+<p>‘dcos’ : directional cosine values of the element</p>
+<dl class="simple">
+<dt>‘node_ind’<span class="classifier">indicies in the array ‘nodal_data’</span></dt><dd><p>corresponding to the element</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-lib.solvers">
+<span id="lib-solvers"></span><h2>lib.solvers<a class="headerlink" href="#module-lib.solvers" title="Permalink to this headline">¶</a></h2>
+<p>solvers module contains all the main FEM solver classes</p>
+<dl class="class">
+<dt id="lib.solvers.BaseSolver">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solvers.</code><code class="sig-name descname">BaseSolver</code><span class="sig-paren">(</span><em class="sig-param">SolverInput</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The base class for all the solvers.</p>
+<p>The BaseSolver defines the global stiffness matrix construction, and the
+method for solving displacements, which is common for all the specific
+solvers. It also contains an abstract method to define the local stiffness
+matrix to be implement by other solvers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>SolverInput</strong> (<a class="reference internal" href="#lib.solver_input.SolverInput" title="lib.solver_input.SolverInput"><em>SolverInput</em></a>) – SolverInput object that contains all input data.</p>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="lib.solvers.BaseSolver.sol_in">
+<code class="sig-name descname">sol_in</code><a class="headerlink" href="#lib.solvers.BaseSolver.sol_in" title="Permalink to this definition">¶</a></dt>
+<dd><p>A local object reference to the SolverInput object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#lib.solver_input.SolverInput" title="lib.solver_input.SolverInput">SolverInput</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solvers.BaseSolver.global_conn">
+<code class="sig-name descname">global_conn</code><a class="headerlink" href="#lib.solvers.BaseSolver.global_conn" title="Permalink to this definition">¶</a></dt>
+<dd><p>The global connectivity list. The indices of the list represents the
+element index, and the value in the lists are the corresponding list
+that shows the indices in global stiffness matrix that corresponds to
+each of its nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list of lists</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solvers.BaseSolver.K_global">
+<code class="sig-name descname">K_global</code><a class="headerlink" href="#lib.solvers.BaseSolver.K_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>The stiffness matrix of the structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="lib.solvers.BaseSolver.displacements">
+<code class="sig-name descname">displacements</code><a class="headerlink" href="#lib.solvers.BaseSolver.displacements" title="Permalink to this definition">¶</a></dt>
+<dd><p>The array of nodal displacements calculated by the solver.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>numpy.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.get_K_global">
+<code class="sig-name descname">get_K_global</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.get_K_global"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.get_K_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the global stiffness matrix.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.get_Kel_global">
+<code class="sig-name descname">get_Kel_global</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.get_Kel_global"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.get_Kel_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the global stiffness matrix. (abstract method)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.solve_displacement">
+<code class="sig-name descname">solve_displacement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.solve_displacement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.solve_displacement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the nodal displacement array.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.get_element_conn">
+<code class="sig-name descname">get_element_conn</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.get_element_conn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.get_element_conn" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the connectivity list of a given element. An index of the list
+represents an index of the local stiffness matrix, and the value of
+the lists represents the index of the global stiffness matrix. The
+connectivity list is used to assemble the global stiffness matrix from
+local stiffness matrices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.constraint_node_flags">
+<code class="sig-name descname">constraint_node_flags</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.constraint_node_flags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.constraint_node_flags" title="Permalink to this definition">¶</a></dt>
+<dd><p>return a 1D numpy of flags, where 1 in the element represents
+a fixed dof to the corresponded index that assigned by input boundary
+conditions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.initialize_disp_and_force">
+<code class="sig-name descname">initialize_disp_and_force</code><span class="sig-paren">(</span><em class="sig-param">keepList</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.initialize_disp_and_force"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.initialize_disp_and_force" title="Permalink to this definition">¶</a></dt>
+<dd><p>initialize displacements and force matrix to be solved.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.fill_nodal_forces">
+<code class="sig-name descname">fill_nodal_forces</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.fill_nodal_forces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.fill_nodal_forces" title="Permalink to this definition">¶</a></dt>
+<dd><p>helper function for initialize_disp_and_force to
+initializing force matrix.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">constraint_node_flags</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.constraint_node_flags"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>return a 1D numpy of flags, where 1 in the element represents
+a fixed dof to the corresponded index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a list of 1 or 0. 1 means the corresponding indices of the global
+stiffness matrix (which means the degree of freedom) is fixed.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">fill_nodal_forces</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.fill_nodal_forces"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>fill-in the force vector from F matrix.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">get_K_global</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.get_K_global"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Calculate the global stiffness matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The global stiffness matrix of the structure.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<em class="property">abstract </em><code class="sig-name descname">get_Kel_global</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.get_Kel_global"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Returns the element stiffness matrix in global coordinates
+for given element index.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">get_element_conn</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.get_element_conn"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Get a list which its indices represent the indices of
+element stiffness matrix, whereas the elements of the list
+points to the indices of the global stiffness matrix.
+The list is called connectivity matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list that maps the local stiffnesss matrix indices to global
+stiffness matrix indices</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">initialize_disp_and_force</code><span class="sig-paren">(</span><em class="sig-param">keepList</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.initialize_disp_and_force"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>initialize the displacement and force vector for solving displacement.
+Non-homogeneous boundary conditions are also considered.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.BaseSolver.solveForce">
+<code class="sig-name descname">solveForce</code><span class="sig-paren">(</span><em class="sig-param">dMatrix</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.solveForce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.BaseSolver.solveForce" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solved for the reaction forces of nodes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="sig-name descname">solve_displacement</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#BaseSolver.solve_displacement"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Solve and return the nodal displacements using
+global stiffness matrix and force vector.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The array containing every nodal displacement components.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.solvers.FrameSolver2D">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solvers.</code><code class="sig-name descname">FrameSolver2D</code><span class="sig-paren">(</span><em class="sig-param">SolverInput</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.solvers.TrussSolver2D" title="lib.solvers.TrussSolver2D"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.solvers.TrussSolver2D</span></code></a></p>
+<p>Solver class for 2D frame structures.</p>
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.Kel_local_axial">
+<code class="sig-name descname">Kel_local_axial</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.Kel_local_axial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.Kel_local_axial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Kel_local (element stiffness matrix in local coordinates) of
+the axial components.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.Kel_local_bending">
+<code class="sig-name descname">Kel_local_bending</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.Kel_local_bending"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.Kel_local_bending" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Kel_local (element stiffness matrix in local coordinates) of
+the bending components.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.get_Kel_local">
+<code class="sig-name descname">get_Kel_local</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.get_Kel_local"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.get_Kel_local" title="Permalink to this definition">¶</a></dt>
+<dd><p>combining the bending components and axial components of the stiffness
+matrix.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.get_T">
+<code class="sig-name descname">get_T</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.get_T"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.get_T" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the transformation matrix T of given element.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.get_beam_deflection">
+<code class="sig-name descname">get_beam_deflection</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">L</em>, <em class="sig-param">element_index</em>, <em class="sig-param">beam_nodal_disp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.get_beam_deflection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.get_beam_deflection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the beam deflection of interpolation points
+by using the shape functions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.get_interpolate_points">
+<code class="sig-name descname">get_interpolate_points</code><span class="sig-paren">(</span><em class="sig-param">element_index</em>, <em class="sig-param">scale_factor</em>, <em class="sig-param">sub_element_num</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.get_interpolate_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.get_interpolate_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a 2D array of nodal coordinates after deformation and the
+effect of the deformation scale factor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.get_interpolated_axial_disp">
+<code class="sig-name descname">get_interpolated_axial_disp</code><span class="sig-paren">(</span><em class="sig-param">x</em>, <em class="sig-param">L</em>, <em class="sig-param">lement_index</em>, <em class="sig-param">axial_nodal_disp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.get_interpolated_axial_disp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.get_interpolated_axial_disp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the axial displacements of interpolation points
+by using the shape functions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.FrameSolver2D.interpolate_shape">
+<code class="sig-name descname">interpolate_shape</code><span class="sig-paren">(</span><em class="sig-param">mag_factor</em>, <em class="sig-param">sub_element_num=100</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#FrameSolver2D.interpolate_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.FrameSolver2D.interpolate_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a 3D array, with each element corresponds to a 2D array that
+represents the nodal coordinates after the deformation and the effect
+of scale factor in x and y direction for every
+interpolation points. The array is used to plot the deformation shape.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.solvers.TriangularElementSolver">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solvers.</code><code class="sig-name descname">TriangularElementSolver</code><span class="sig-paren">(</span><em class="sig-param">SolverInput</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.solvers.BaseSolver" title="lib.solvers.BaseSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.solvers.BaseSolver</span></code></a></p>
+<p>Constant Strain Triangular (CST) elements for 2D structures.</p>
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.get_Jacobian_det">
+<code class="sig-name descname">get_Jacobian_det</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.get_Jacobian_det"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.get_Jacobian_det" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the determinant of the Jacobian matrix</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.get_Kel_global">
+<code class="sig-name descname">get_Kel_global</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.get_Kel_global"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.get_Kel_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get element stiffness matrix.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.get_element_strain">
+<code class="sig-name descname">get_element_strain</code><span class="sig-paren">(</span><em class="sig-param">element_index</em>, <em class="sig-param">nodal_displacement</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.get_element_strain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.get_element_strain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the strain of the given element index.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.get_element_stress">
+<code class="sig-name descname">get_element_stress</code><span class="sig-paren">(</span><em class="sig-param">element_index</em>, <em class="sig-param">element_strain</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.get_element_stress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.get_element_stress" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the stress of the given element index.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.get_stress_and_strain">
+<code class="sig-name descname">get_stress_and_strain</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.get_stress_and_strain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.get_stress_and_strain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the stress and strain matrix containing the values for each
+elements.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.strain_displacement_matrix">
+<code class="sig-name descname">strain_displacement_matrix</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.strain_displacement_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.strain_displacement_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the strain-displacement matrix (the constitutive matrix)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TriangularElementSolver.stress_strain_matrix">
+<code class="sig-name descname">stress_strain_matrix</code><span class="sig-paren">(</span><em class="sig-param">element_index</em>, <em class="sig-param">is_plane_strain=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TriangularElementSolver.stress_strain_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TriangularElementSolver.stress_strain_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the stress-strain matrix (the constitutive matrix)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="lib.solvers.TrussSolver2D">
+<em class="property">class </em><code class="sig-prename descclassname">lib.solvers.</code><code class="sig-name descname">TrussSolver2D</code><span class="sig-paren">(</span><em class="sig-param">SolverInput</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#lib.solvers.BaseSolver" title="lib.solvers.BaseSolver"><code class="xref py py-class docutils literal notranslate"><span class="pre">lib.solvers.BaseSolver</span></code></a></p>
+<p>Solver class for 2D truss structures.</p>
+<dl class="method">
+<dt id="lib.solvers.TrussSolver2D.element_stiffness">
+<code class="sig-name descname">element_stiffness</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D.element_stiffness"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D.element_stiffness" title="Permalink to this definition">¶</a></dt>
+<dd><p>return the stiffness of a single truss element.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TrussSolver2D.get_Kel_global">
+<code class="sig-name descname">get_Kel_global</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D.get_Kel_global"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D.get_Kel_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of get_Kel_global method for BaseSolver class</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TrussSolver2D.get_Kel_local">
+<code class="sig-name descname">get_Kel_local</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D.get_Kel_local"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D.get_Kel_local" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the element stiffness matrix in local coordinates
+for 2D truss structural elements.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TrussSolver2D.get_T">
+<code class="sig-name descname">get_T</code><span class="sig-paren">(</span><em class="sig-param">element_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D.get_T"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D.get_T" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the transformation matrix T of given element.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TrussSolver2D.get_stress">
+<code class="sig-name descname">get_stress</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D.get_stress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D.get_stress" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implementation of get_stress method for BaseSolver class</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="lib.solvers.TrussSolver2D.interpolate_shape">
+<code class="sig-name descname">interpolate_shape</code><span class="sig-paren">(</span><em class="sig-param">mag_factor</em>, <em class="sig-param">sub_element_num=100</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lib/solvers.html#TrussSolver2D.interpolate_shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#lib.solvers.TrussSolver2D.interpolate_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Note: Since truss uses linear shape functions, no interpolation is used.
+The method returns the deformed nodal positon of elements to make
+output utility usage consistent.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-lib">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-lib" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="basicfem.html">basicfem – main script</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">lib – library for basicfem solver</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-lib.output_utility">lib.output_utility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-lib.solver_input">lib.solver_input module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-lib.solvers">lib.solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-lib">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mshreader.html">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="basicfem.html" title="previous chapter">basicfem – main script</a></li>
+      <li>Next: <a href="mshreader.html" title="next chapter">mshreader – interface for reading Gmsh files</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/source_rst/lib.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

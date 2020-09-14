@@ -1,4 +1,4 @@
-""" Classes that represents input data"""
+""" solver_input module contains classes that represents the input data"""
 
 import numpy as np
 import os
@@ -6,80 +6,104 @@ from abc import ABCMeta, abstractmethod
 
 
 class SolverInput(metaclass=ABCMeta):
-    """The object representing the input data of the structure to be solved.
+    """
+    SolverInput is the object representing the input data of the 
+    structure to be solved.
 
     This is a abstract class that cannot be instantiated, served as a base 
-    class for all the specific input class.
+    class for all the specific input data object.
 
     Parameters
     ----------
-    filename: The name of the input file containing struture's data.
-
+    source_name : str
+        The name of the input directory or the input xlsx file 
+        containing struture's data.
+    
+    
     Attributes
     ----------
 
-    node_per_element: Number of node per element.
+    node_per_element: int
+        Number of node per element.
 
-    dof : Degree of freedoms of nodes.
+    dof : int
+        Degree of freedoms of nodes.
 
-    num_of_nodes : total number of nodes of the structure.
+    num_of_nodes : int
+        Total number of nodes of the structure.
 
-    num_of_elements : total number of elements of the structure.
+    num_of_elements : int
+        Total number of elements of the structure.
 
-    nodal_data : an array containing the nodal labels and nodal coordinates. 
-                 The structure is as follows:
-                 1st column : node labels
-                 2nd column : x coordinate of the node
-                 3rd column : y coordinate of the node
-                 4th column : z coordinate of the node (if applicable)
+    nodal_data : numpy.ndarray
+        An array containing the nodal labels and nodal coordinates. 
+        The structure is as follows:
 
-    element_data : an array containing cooresponding nodes and properties of 
-                   the elements. The structure is as follows:
-                   1st column : element labels
-                   2nd column : first nodes
-                   3rd column : second nodes
-                   4th column : property number (see properties array)
+        1st column : node labels
 
-    bound_con : an array containing the nodal fixed boundary conditions of 
-                the problem. The 1st column is the corresponding nodal labels,
-                the remaining columns corresponds to conditions in x, y, and 
-                z coordinates. 1 represents fixed, 0 represents fixed.
-                Nodes not included in this array are treated as free nodes.
+        2nd column : x coordinate of the node
+
+        3rd column : y coordinate of the node
+
+        4th column : z coordinate of the node (if applicable)
+
+    element_data : numpy.ndarray
+        An array containing the cooresponding nodes and properties 
+        of the elements. The structure is as follows:
+
+        1st column : element labels
+
+        2nd column : first nodes
+
+        3rd column : second nodes
+
+        4th column : property number (see properties array)
+
+    bound_con : numpy.ndarray
+        an array containing the nodal fixed boundary conditions of 
+        the problem. The 1st column is the corresponding nodal labels,
+        the remaining columns corresponds to conditions in x, y, and 
+        z coordinates. 1 represents fixed, 0 represents fixed.
+        Nodes not included in this array are treated as free nodes.
     
-    bound_con_nonhomo : an array containing the non-homogeneous conditions.
-                        Similar structure as bound_con, except that columns 
-                        corresponding x, y, and z coodinates are the magnitude
-                        of displacements.
+    bound_con_nonhomo : numpy.ndarray
+        An array containing the non-homogeneous conditions.
+        Similar structure as bound_con, except that columns 
+        corresponding x, y, and z coodinates are the magnitude
+        of displacements.
 
-    nodal_forces : an array containing the external nodal forces. Similar 
-                   structure as bound_con, except that the columns
-                   corresponding x, y, and z coordinates are the magnitude of
-                   displacements.
+    nodal_forces : numpy.ndarray
+        An array containing the external nodal forces. Similar 
+        structure as bound_con, except that the columns
+        corresponding x, y, and z coordinates are the magnitude of
+        displacements.
     
-    properties : an array containing the properties of all elements. The 
-                 structure is as follows:
-                 1st column : 
-                 property labels corresponds to array 'element_data'
-                 2nd column : 
-                 material number corresponds to array 'materials'
-                 3rd column : 
-                 cross-sectional area of the cooresponding elements.
-                 4th column : 
-                 z Moment of inertia of the corresponding elements.
-    
-    materials : an array containing the properties of all elements. The 
-                structure is as follows:
-                1st column : 
-                material labels corresponds to array 'properties'
-                2nd column : 
-                Young's modulus
-                3rd column : D
-                ensity of the material
+    properties : numpy.ndarray
+        an array containing the properties of all elements. The 
+        structure is as follows:
 
-    Method
-    ----------
+        1st column : property labels corresponds to array 'element_data'
+
+        2nd column : material number corresponds to array 'materials'
+
+        3rd column : cross-sectional area of the cooresponding elements.
+
+        4th column : z Moment of inertia of the corresponding elements.
+    
+    materials : numpy.ndarray
+        an array containing the properties of all elements. The 
+        structure is as follows:
+
+        1st column : material labels corresponds to array 'properties'
+
+        2nd column : Young's modulus
+
+        3rd column : Density of the material
+
+    Methods
+    -------
     get_element_property(property_type, element_num, is_label=False)                                    
-        returns the property of a single elements.
+        returns the property of a single element.
     
     """
     
@@ -115,7 +139,7 @@ class SolverInput(metaclass=ABCMeta):
             pass
 
     def _read_excel_input(self, filename):
-        """get input data of the structure from a excel file."""
+        """ get input data of the structure from a excel file. """
         from pandas import read_excel
         self.nodal_data = read_excel(filename, sheet_name = 'N').values
         self.element_data = read_excel(filename, sheet_name = 'E').values
@@ -127,6 +151,11 @@ class SolverInput(metaclass=ABCMeta):
         self.materials = read_excel(filename, sheet_name = 'M').values
     
     def _read_txt_input(self, dirname):
+        """ 
+        get input data of the structure from a directory contains 
+        txt files 
+        
+        """
         input_dir_path = './' + dirname
         self.nodal_data = np.loadtxt(input_dir_path + '/nodal_data.txt')
         self.element_data = np.loadtxt(input_dir_path + '/element_data.txt', 
@@ -148,22 +177,25 @@ class SolverInput(metaclass=ABCMeta):
 
     @abstractmethod
     def get_element_property(self, property_type, element_num, is_label=False):
-        """ Returns the property of a single elements 
+        """ Returns the property of a single elements. 
             
             parameters
             ----------
-            property_type: a string that indicates the property to return.
-            element.
+            property_type : str 
+                A string that indicates the property to return.
 
-            element_num : an integer indicates the index or the label of 
-                          the element. 
 
-            is_label : a boolean indicates if the variable 'element_num' is a
-                       label. If it is true, the function will search for the
-                       element property using the element's label. If it is 
-                       false, the function will search for the element property
-                       using the index of the array 'element_data'.
-                       The default is false.     
+            element_num : int
+                an integer indicates the index or the label of 
+                the element. 
+
+            is_label : bool
+                a boolean indicates if the variable 'element_num' is a
+                label. If it is true, the function will search for the
+                element property using the element's label. If it is 
+                false, the function will search for the element property
+                using the index of the array 'element_data'.
+                The default is false.     
         
         """
         pass
@@ -174,11 +206,6 @@ class TrussInput2D(SolverInput):
 
     See SolverInput class for more descriptions on parameters and attributes. 
 
-    Method
-    ----------
-    get_element_property(property_type, element_num, is_label=False)                                    
-        returns the property of a single elements.
-    
     """
     
     def __init__(self, filename):
@@ -190,18 +217,31 @@ class TrussInput2D(SolverInput):
         self.element_dim = 1
 
     def get_element_property(self, property_type, element_num, is_label=False):
-        """
-            property_type:
-                           'A' : area
-                           'E' : Young's modulus
-                           'I' : moment of inertia
-                           'rho' : material density
-                           'Yc' : compressive yield strength
-                           'Yt' : tensile yield strenth
-                           'L' : element length
-                           'dcos' : directional cosine values of the element
-                           'node_ind' : indicies in the array 'nodal_data'
-                                        corresponding to the element   
+        
+        """ 
+            See SolverInput for descriptions.
+
+            property_type options:
+
+            'A' : area
+
+            'E' : Young's modulus
+
+            'I' : moment of inertia
+
+            'rho' : material density
+
+            'Yc' : compressive yield strength
+
+            'Yt' : tensile yield strenth
+
+            'L' : element length
+
+            'dcos' : directional cosine values of the element
+
+            'node_ind' : indicies in the array 'nodal_data'
+                        corresponding to the element   
+
         """
 
         if is_label:
@@ -276,12 +316,21 @@ class TriangularElementInput(SolverInput):
 
     def get_element_property(self, property_type, element_num, is_label=False):
         """
-            property_type:
-                           't' : thickness
-                           'E' : Young's modulus
-                           'nu' : poisson's ratio
-                           'node_ind' : indicies in the array 'nodal_data'
-                                        corresponding to the element   
+            See SolverInput for descriptions.
+
+            property_type options:
+
+            't' : thickness
+
+            'E' : Young's modulus
+
+            'nu' : poisson's ratio
+
+            'node_ind' : indicies in the array 'nodal_data' corresponding 
+            to the element.
+
+            'nodal_coord' : nodal coordinates of the given element.
+
         """
 
         if is_label:
@@ -311,7 +360,8 @@ class TriangularElementInput(SolverInput):
         return result
 
     def _get_nodal_indices(self, element_num):
-        """get nodal indies of a given element"""
+        """get nodal indices of a given element. """
+
         nodal_indices = []
         for i in range(1,4):
             nodal_indices.append(np.argwhere(self.nodal_data[:,0] ==
@@ -319,6 +369,8 @@ class TriangularElementInput(SolverInput):
         return nodal_indices
     
     def _get_nodal_coordinates(self, element_num):
+        """get nodal coorinates of a given element. """
+
         nodal_indices = self._get_nodal_indices(element_num)
         nodal_coord_nparray = self.nodal_data[nodal_indices, 1:]
         return nodal_coord_nparray

@@ -1,4 +1,4 @@
-""" This module contains all the main FEM solver classes """
+""" solvers module contains all the main FEM solver classes """
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,16 +6,81 @@ from abc import ABCMeta, abstractclassmethod
 from lib.solver_input import *
 
 class BaseSolver(metaclass=ABCMeta):
-    """ The base class for all the solvers """
+    """ The base class for all the solvers.
+
+    The BaseSolver defines the global stiffness matrix construction, and the 
+    method for solving displacements, which is common for all the specific 
+    solvers. It also contains an abstract method to define the local stiffness
+    matrix to be implement by other solvers.
+
+
+    Parameters
+    ----------
+    SolverInput: SolverInput
+        SolverInput object that contains all input data.
+    
+
+    Attributes
+    ----------
+    sol_in : SolverInput
+        A local object reference to the SolverInput object.
+
+    global_conn : list of lists
+        The global connectivity list. The indices of the list represents the
+        element index, and the value in the lists are the corresponding list 
+        that shows the indices in global stiffness matrix that corresponds to
+        each of its nodes.
+
+    K_global : numpy.array
+        The stiffness matrix of the structure.
+
+    displacements : numpy.array
+        The array of nodal displacements calculated by the solver.
+
+
+    Methods
+    -------
+
+    get_K_global()
+        Calculate the global stiffness matrix.
+    get_Kel_global()
+        Calculate the global stiffness matrix. (abstract method)
+    solve_displacement()
+        Calculate the nodal displacement array.
+    get_element_conn(element_index)
+        get the connectivity list of a given element. An index of the list 
+        represents an index of the local stiffness matrix, and the value of 
+        the lists represents the index of the global stiffness matrix. The 
+        connectivity list is used to assemble the global stiffness matrix from
+        local stiffness matrices.
+    constraint_node_flags()
+        return a 1D numpy of flags, where 1 in the element represents 
+        a fixed dof to the corresponded index that assigned by input boundary
+        conditions.
+    initialize_disp_and_force(keepList)
+        initialize displacements and force matrix to be solved.
+    fill_nodal_forces()
+        helper function for initialize_disp_and_force to 
+        initializing force matrix.
+    """
 
     def __init__(self, SolverInput):
+        """ Reads the SolverInput and execute solver process. """
         self.sol_in = SolverInput
         self.global_conn = []  #  global connectivity matrix for K
         self.K_global = self.get_K_global()
         self.displacements = self.solve_displacement()
 
     def get_K_global(self):
-        """ Returns the global stiffness matrix. """
+        """ Calculate the global stiffness matrix.
+        
+        
+        Returns
+        -------
+        numpy.ndarray
+            The global stiffness matrix of the structure.
+        
+        """
 
         total_dof = self.sol_in.dof * self.sol_in.num_of_nodes
         K_global = np.zeros((total_dof, total_dof))
@@ -49,6 +114,11 @@ class BaseSolver(metaclass=ABCMeta):
         Solve and return the nodal displacements using 
         global stiffness matrix and force vector. 
         
+        Returns
+        -------
+        numpy.ndarray
+            The array containing every nodal displacement components.
+
         """
 
         constraintFlags = self.constraint_node_flags()  \
@@ -70,10 +140,16 @@ class BaseSolver(metaclass=ABCMeta):
 
     def get_element_conn(self, element_index):
         """
-        return a list which its indices represent the indices of 
+        Get a list which its indices represent the indices of 
         element stiffness matrix, whereas the elements of the list 
         points to the indices of the global stiffness matrix.
         The list is called connectivity matrix.
+
+        returns
+        -------
+        list
+            A list that maps the local stiffnesss matrix indices to global 
+            stiffness matrix indices
 
         """
         node_indices = self.sol_in.get_element_property('node_ind', 
@@ -92,6 +168,12 @@ class BaseSolver(metaclass=ABCMeta):
         return a 1D numpy of flags, where 1 in the element represents 
         a fixed dof to the corresponded index.
         
+        returns
+        -------
+        list
+            a list of 1 or 0. 1 means the corresponding indices of the global
+            stiffness matrix (which means the degree of freedom) is fixed.
+
         """
 
         flag_list = np.zeros(self.sol_in.num_of_nodes * self.sol_in.dof)
@@ -267,7 +349,9 @@ class FrameSolver2D(TrussSolver2D):
     def __init__(self, SolverInput):
         BaseSolver.__init__(self, SolverInput)
 
-    def fill_Kel_local(self, input_matrix, conn):
+    def _fill_Kel_local(self, input_matrix, conn):
+        """ Helper function to fill in Kel_local. """
+
         element_dof = self.sol_in.dof * self.sol_in.node_per_element
         Kel_local_component = np.zeros((element_dof, element_dof))
         for i in range(len(input_matrix)):
@@ -277,12 +361,25 @@ class FrameSolver2D(TrussSolver2D):
 
 
     def Kel_local_axial(self, element_index):
+
+        """ 
+        Get the Kel_local (element stiffness matrix in local coordinates) of
+        the axial components.
+        
+        """
         stiffness = self.element_stiffness(element_index)
         Kel_axial_1D = stiffness * np.array([(1, -1), (-1, 1)])
         axial_conn = [0, self.sol_in.dof]
-        return self.fill_Kel_local(Kel_axial_1D, axial_conn)
+        return self._fill_Kel_local(Kel_axial_1D, axial_conn)
     
     def Kel_local_bending(self, element_index):
+
+        """ 
+        Get the Kel_local (element stiffness matrix in local coordinates) of
+        the bending components.
+        
+        """
+
         E = self.sol_in.get_element_property('E', element_index)
         I = self.sol_in.get_element_property('I', element_index)
         L = self.sol_in.get_element_property('L', element_index)
@@ -293,14 +390,20 @@ class FrameSolver2D(TrussSolver2D):
                                     (  6*L, 2*L**2, -6*L, 4*L**2)
                                    ])
         bending_conn = [1, 2, 1 + self.sol_in.dof, 2 + self.sol_in.dof]
-        return self.fill_Kel_local(Kel_bending_primitive, bending_conn)
+        return self._fill_Kel_local(Kel_bending_primitive, bending_conn)
     
     def get_Kel_local(self, element_index):
+        """ 
+        combining the bending components and axial components of the stiffness
+        matrix.
+        
+        """
         return self.Kel_local_axial(element_index) \
                 + self.Kel_local_bending(element_index)
 
     def get_T(self, element_index):
         """ Get the transformation matrix T of given element. """
+
         # Calculate cos and sin value for given element
         directional_cosine = self.sol_in.get_element_property('dcos', 
                                                                 element_index)
@@ -317,10 +420,17 @@ class FrameSolver2D(TrussSolver2D):
         return T
     
     def interpolate_shape(self, mag_factor,sub_element_num=100):
+        """
+        Generates a 3D array, with each element corresponds to a 2D array that
+        represents the nodal coordinates after the deformation and the effect
+        of scale factor in x and y direction for every 
+        interpolation points. The array is used to plot the deformation shape.
+
+        """
+
         interpolated_nodal_data = np.zeros((self.sol_in.num_of_elements, 
                                            sub_element_num+1, 2))
         
-
         # need to offset by the new nodal position
         for element_index in range(self.sol_in.num_of_elements):
             interpolated_nodal_data[element_index,:,:] = \
@@ -329,7 +439,14 @@ class FrameSolver2D(TrussSolver2D):
             
         return interpolated_nodal_data
 
-    def get_interpolate_points(self, element_index, mag_factor, sub_element_num):
+    def get_interpolate_points(self, element_index, 
+            scale_factor, sub_element_num):
+        """
+        Generates a 2D array of nodal coordinates after deformation and the 
+        effect of the deformation scale factor.
+        
+        """
+
         # get local displacement of the two nodes
         node_ind = self.sol_in.get_element_property('node_ind', 
                                                     element_index)
@@ -352,7 +469,8 @@ class FrameSolver2D(TrussSolver2D):
         axial_nodal_disp = local_disp[[0,3]]
         beam_nodal_disp = local_disp[[1,2,4,5]]
         
-        directional_cosine = self.sol_in.get_element_property('dcos', element_index)
+        directional_cosine = \
+            self.sol_in.get_element_property('dcos', element_index)
         C = directional_cosine[0]
         S = directional_cosine[1]
 
@@ -362,21 +480,32 @@ class FrameSolver2D(TrussSolver2D):
         for i, x in enumerate(interpolation_pts[:,0]):
             
             interpolation_pts[i,0] += self.get_interpolated_axial_disp(
-                        x, L, element_index, axial_nodal_disp) * mag_factor
+                        x, L, element_index, axial_nodal_disp) * scale_factor
             interpolation_pts[i,1] = self.get_beam_deflection(
-                        x, L, element_index, beam_nodal_disp) * mag_factor
+                        x, L, element_index, beam_nodal_disp) * scale_factor
             interpolation_pts[i,:] = transform_2d.T @ interpolation_pts[i,0:2]\
                         + self.get_first_nodal_position(element_index)
         return interpolation_pts
 
     
-    def get_first_nodal_position(self, element_index):
+    def _get_first_nodal_position(self, element_index):
+        """ 
+        Get the first nodal position of an element. The first nodal position 
+        is used to locate the element when doing transformation for interpolate
+        shape.
+        """
+
         nodal_indices = self.sol_in.get_element_property('node_ind', 
                                                           element_index)
         return self.sol_in.nodal_data[nodal_indices[0],1:3].copy()
         
     def get_beam_deflection(self, x, L, element_index, beam_nodal_disp):
+        """
+        Get the beam deflection of interpolation points
+        by using the shape functions. 
         
+        """        
+
         # Hermite cubic interpolation function
         N1 = 1/L**3 * (2 * x**3 - 3 * x**2 * L + L**3)
         N2 = 1/L**3 * (x**3 * L - 2 * x**2 * L**2 + x * L**3)
@@ -389,18 +518,33 @@ class FrameSolver2D(TrussSolver2D):
     
     def get_interpolated_axial_disp(self, x, L, 
                                     lement_index, axial_nodal_disp):
-        
+        """ 
+        Get the axial displacements of interpolation points
+        by using the shape functions. 
+
+        """  
         N = np.array([1 - x/L, x/L])  # linear axial interpolation function
         return N @ axial_nodal_disp
 
 
 class TriangularElementSolver(BaseSolver):
+    """ Constant Strain Triangular (CST) elements for 2D structures. """
     
     def __init__(self, SolverInput):
+
+        """ 
+        In addition to BaseSolver operation, the solver also evaluates
+        the stress and strain for each elements.
+
+        """
+        
         BaseSolver.__init__(self, SolverInput)
         self.stress, self.strain = self.get_stress_and_strain()
 
     def stress_strain_matrix(self, element_index, is_plane_strain=False):
+        """ Get the stress-strain matrix (the constitutive matrix) """
+
+
         nu = self.sol_in.get_element_property('nu', element_index)
         E = self.sol_in.get_element_property('E', element_index)
         if not is_plane_strain:
@@ -411,6 +555,8 @@ class TriangularElementSolver(BaseSolver):
         return D
 
     def strain_displacement_matrix(self, element_index):
+        """ Get the strain-displacement matrix (the constitutive matrix) """
+
         Coord = self.sol_in.get_element_property('nodal_coord', element_index)
         dydeta = -Coord[0,1] + Coord[2,1]  # -y1 + y3
         dydxi = -Coord[0,1] + Coord[1,1]   # -y1 + y2
@@ -433,6 +579,8 @@ class TriangularElementSolver(BaseSolver):
         return B
 
     def get_Jacobian_det(self, element_index):
+        """ Get the determinant of the Jacobian matrix """
+
         Coord = self.sol_in.get_element_property('nodal_coord', element_index)
         dydeta = -Coord[0,1] + Coord[2,1] 
         dydxi = -Coord[0,1] + Coord[1,1] 
@@ -442,6 +590,8 @@ class TriangularElementSolver(BaseSolver):
         return Jdet
     
     def get_Kel_global(self, element_index):
+        """ Get element stiffness matrix. """
+
         B = self.strain_displacement_matrix(element_index)
         D = self.stress_strain_matrix(element_index)
         Jdet = self.get_Jacobian_det(element_index)
@@ -450,14 +600,24 @@ class TriangularElementSolver(BaseSolver):
         return Kel
 
     def get_element_strain(self, element_index, nodal_displacement):
+        """ Get the strain of the given element index. """
+
         B = self.strain_displacement_matrix(element_index)
         return B @ nodal_displacement
     
     def get_element_stress(self, element_index, element_strain):
+        """ Get the stress of the given element index. """
+
         D = self.stress_strain_matrix(element_index)
         return D @ element_strain   
     
     def get_stress_and_strain(self):
+        """ 
+        Get the stress and strain matrix containing the values for each
+        elements.
+        
+        """
+
         num_elements = self.sol_in.num_of_elements
         strain = np.zeros((num_elements, 3))
         stress = np.zeros((num_elements, 3))

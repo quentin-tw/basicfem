@@ -1,0 +1,734 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.solvers &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.solvers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; solvers module contains all the main FEM solver classes &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractclassmethod</span>
+<span class="kn">from</span> <span class="nn">lib.solver_input</span> <span class="kn">import</span> <span class="o">*</span>
+
+<div class="viewcode-block" id="BaseSolver"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver">[docs]</a><span class="k">class</span> <span class="nc">BaseSolver</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; The base class for all the solvers.</span>
+
+<span class="sd">    The BaseSolver defines the global stiffness matrix construction, and the </span>
+<span class="sd">    method for solving displacements, which is common for all the specific </span>
+<span class="sd">    solvers. It also contains an abstract method to define the local stiffness</span>
+<span class="sd">    matrix to be implement by other solvers.</span>
+
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    SolverInput: SolverInput</span>
+<span class="sd">        SolverInput object that contains all input data.</span>
+<span class="sd">    </span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sol_in : SolverInput</span>
+<span class="sd">        A local object reference to the SolverInput object.</span>
+
+<span class="sd">    global_conn : list of lists</span>
+<span class="sd">        The global connectivity list. The indices of the list represents the</span>
+<span class="sd">        element index, and the value in the lists are the corresponding list </span>
+<span class="sd">        that shows the indices in global stiffness matrix that corresponds to</span>
+<span class="sd">        each of its nodes.</span>
+
+<span class="sd">    K_global : numpy.array</span>
+<span class="sd">        The stiffness matrix of the structure.</span>
+
+<span class="sd">    displacements : numpy.array</span>
+<span class="sd">        The array of nodal displacements calculated by the solver.</span>
+
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    get_K_global()</span>
+<span class="sd">        Calculate the global stiffness matrix.</span>
+<span class="sd">    get_Kel_global()</span>
+<span class="sd">        Calculate the global stiffness matrix. (abstract method)</span>
+<span class="sd">    solve_displacement()</span>
+<span class="sd">        Calculate the nodal displacement array.</span>
+<span class="sd">    get_element_conn(element_index)</span>
+<span class="sd">        get the connectivity list of a given element. An index of the list </span>
+<span class="sd">        represents an index of the local stiffness matrix, and the value of </span>
+<span class="sd">        the lists represents the index of the global stiffness matrix. The </span>
+<span class="sd">        connectivity list is used to assemble the global stiffness matrix from</span>
+<span class="sd">        local stiffness matrices.</span>
+<span class="sd">    constraint_node_flags()</span>
+<span class="sd">        return a 1D numpy of flags, where 1 in the element represents </span>
+<span class="sd">        a fixed dof to the corresponded index that assigned by input boundary</span>
+<span class="sd">        conditions.</span>
+<span class="sd">    initialize_disp_and_force(keepList)</span>
+<span class="sd">        initialize displacements and force matrix to be solved.</span>
+<span class="sd">    fill_nodal_forces()</span>
+<span class="sd">        helper function for initialize_disp_and_force to </span>
+<span class="sd">        initializing force matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reads the SolverInput and execute solver process. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span> <span class="o">=</span> <span class="n">SolverInput</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_conn</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1">#  global connectivity matrix for K</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">K_global</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_K_global</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">displacements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve_displacement</span><span class="p">()</span>
+
+<div class="viewcode-block" id="BaseSolver.get_K_global"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.get_K_global">[docs]</a>    <span class="k">def</span> <span class="nf">get_K_global</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculate the global stiffness matrix.</span>
+<span class="sd">        </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            The global stiffness matrix of the structure.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">total_dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_nodes</span>
+        <span class="n">K_global</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">total_dof</span><span class="p">,</span> <span class="n">total_dof</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">):</span>
+            <span class="n">Kel_global</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_Kel_global</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="n">element_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_element_conn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">global_conn</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">element_conn</span><span class="p">)</span>
+
+            <span class="c1"># fill in the global stiffness matrix by given </span>
+            <span class="c1"># element stiffness matrices</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">node_per_element</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">node_per_element</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">):</span>
+                    <span class="n">K_global</span><span class="p">[</span><span class="n">element_conn</span><span class="p">[</span><span class="n">j</span><span class="p">],</span><span class="n">element_conn</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span> \
+                        <span class="o">+=</span> <span class="n">Kel_global</span><span class="p">[</span><span class="n">j</span><span class="p">,</span><span class="n">k</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">K_global</span></div>
+    
+<div class="viewcode-block" id="BaseSolver.get_Kel_global"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.get_Kel_global">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_Kel_global</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Returns the element stiffness matrix in global coordinates</span>
+<span class="sd">        for given element index. </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="BaseSolver.solve_displacement"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.solve_displacement">[docs]</a>    <span class="k">def</span> <span class="nf">solve_displacement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Solve and return the nodal displacements using </span>
+<span class="sd">        global stiffness matrix and force vector. </span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            The array containing every nodal displacement components.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">constraintFlags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_node_flags</span><span class="p">()</span>  \
+                        <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_node_flags</span><span class="p">()</span>
+        
+        <span class="c1"># indices used for solving displacements</span>
+        <span class="n">keepList</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">constraintFlags</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> 
+        
+        <span class="c1"># Note: K_global[keepList,keepList] will not yield desired result.</span>
+        <span class="n">K_reduced</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_global</span><span class="p">[</span><span class="n">keepList</span><span class="p">][:,</span><span class="n">keepList</span><span class="p">]</span>
+
+        <span class="c1"># including the effect of BC_NH</span>
+        <span class="n">displacements</span><span class="p">,</span> <span class="n">F_reduced</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialize_disp_and_force</span><span class="p">(</span><span class="n">keepList</span><span class="p">)</span>
+        
+        <span class="n">d_reduced</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">K_reduced</span><span class="p">,</span><span class="n">F_reduced</span><span class="p">)</span>
+        <span class="n">displacements</span><span class="p">[</span><span class="n">keepList</span><span class="p">]</span> <span class="o">=</span> <span class="n">d_reduced</span>
+
+        <span class="k">return</span> <span class="n">displacements</span></div>
+
+<div class="viewcode-block" id="BaseSolver.get_element_conn"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.get_element_conn">[docs]</a>    <span class="k">def</span> <span class="nf">get_element_conn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a list which its indices represent the indices of </span>
+<span class="sd">        element stiffness matrix, whereas the elements of the list </span>
+<span class="sd">        points to the indices of the global stiffness matrix.</span>
+<span class="sd">        The list is called connectivity matrix.</span>
+
+<span class="sd">        returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            A list that maps the local stiffnesss matrix indices to global </span>
+<span class="sd">            stiffness matrix indices</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;node_ind&#39;</span><span class="p">,</span> 
+                                                            <span class="n">element_index</span><span class="p">)</span>
+
+        <span class="n">element_conn</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">node_per_element</span><span class="p">):</span>
+            <span class="n">node_indices_global</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">node_indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">,</span>
+                                             <span class="n">node_indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span> 
+                                                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">))</span>
+            <span class="n">element_conn</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">node_indices_global</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">element_conn</span>        </div>
+
+<div class="viewcode-block" id="BaseSolver.constraint_node_flags"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.constraint_node_flags">[docs]</a>    <span class="k">def</span> <span class="nf">constraint_node_flags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        return a 1D numpy of flags, where 1 in the element represents </span>
+<span class="sd">        a fixed dof to the corresponded index.</span>
+<span class="sd">        </span>
+<span class="sd">        returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            a list of 1 or 0. 1 means the corresponding indices of the global</span>
+<span class="sd">            stiffness matrix (which means the degree of freedom) is fixed.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">flag_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_nodes</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">bound_con</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>             
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">bound_con</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="n">element</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># DOF * del_N_Ind represents the first element</span>
+                    <span class="c1"># for node index del_N_Ind </span>
+                    <span class="n">del_N_Ind</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> 
+                        <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> 
+                                   <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">bound_con</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">flag_list</span><span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="o">*</span><span class="n">del_N_Ind</span>  <span class="o">+</span> <span class="p">(</span><span class="n">element</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        
+        <span class="k">return</span> <span class="n">flag_list</span></div>
+
+<div class="viewcode-block" id="BaseSolver.fill_nodal_forces"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.fill_nodal_forces">[docs]</a>    <span class="k">def</span> <span class="nf">fill_nodal_forces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; fill-in the force vector from F matrix. &quot;&quot;&quot;</span> 
+
+        <span class="n">forces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_forces</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">force_ind</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> 
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_forces</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+            
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">):</span>
+                <span class="n">forces</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="o">*</span><span class="n">force_ind</span><span class="o">+</span><span class="n">i</span><span class="p">]</span> \
+                    <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_forces</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+    
+        <span class="k">return</span> <span class="n">forces</span></div>
+
+<div class="viewcode-block" id="BaseSolver.initialize_disp_and_force"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.initialize_disp_and_force">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_disp_and_force</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keepList</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        initialize the displacement and force vector for solving displacement.</span>
+<span class="sd">        Non-homogeneous boundary conditions are also considered.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">displacements</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span> 
+                                 <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">force</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fill_nodal_forces</span><span class="p">()</span>
+
+        <span class="c1"># modify the displacements and force matrices </span>
+        <span class="c1"># for non-homogeneous boundary condition.</span>
+        <span class="c1"># If BC_NH empty, this section will be skipped.</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">bound_con_nonhomo</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span> 
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span> 
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">bound_con_nonhomo</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="n">element</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ind_nodal_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> 
+                                    <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">bound_con_nonhomo</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">ind_in_disp</span> <span class="o">=</span> <span class="n">ind_nodal_data</span> \
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span> <span class="o">+</span> <span class="p">(</span><span class="n">element</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+                    <span class="c1"># fill in NHBC</span>
+                    <span class="n">displacements</span><span class="p">[</span><span class="n">ind_in_disp</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">BC_NH</span><span class="p">[</span><span class="n">row</span><span class="p">,</span><span class="n">element</span><span class="p">]</span> 
+
+                    <span class="n">force</span><span class="p">[</span><span class="n">keepList</span><span class="p">]</span> <span class="o">=</span> <span class="n">force</span><span class="p">[</span><span class="n">keepList</span><span class="p">]</span> \
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_global</span><span class="p">[</span><span class="n">keepList</span><span class="p">][:,</span><span class="n">ind_nodal_data</span><span class="p">]</span> \
+                                <span class="o">*</span> <span class="n">displacements</span><span class="p">[</span><span class="n">ind_in_disp</span><span class="p">]</span>
+        
+        <span class="n">force_reduced</span> <span class="o">=</span> <span class="n">force</span><span class="p">[</span><span class="n">keepList</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">displacements</span><span class="p">,</span> <span class="n">force_reduced</span>      </div>
+
+<div class="viewcode-block" id="BaseSolver.solveForce"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.BaseSolver.solveForce">[docs]</a>    <span class="k">def</span> <span class="nf">solveForce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dMatrix</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Solved for the reaction forces of nodes. &quot;&quot;&quot;</span>
+
+        <span class="n">force</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K_global</span> <span class="o">@</span> <span class="n">dMatrix</span>
+        <span class="k">return</span> <span class="n">force</span></div></div>
+
+<div class="viewcode-block" id="TrussSolver2D"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D">[docs]</a><span class="k">class</span> <span class="nc">TrussSolver2D</span><span class="p">(</span><span class="n">BaseSolver</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Solver class for 2D truss structures. &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">):</span>
+        <span class="n">BaseSolver</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stress</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_stress</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TrussSolver2D.get_stress"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D.get_stress">[docs]</a>    <span class="k">def</span> <span class="nf">get_stress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Implementation of get_stress method for BaseSolver class &quot;&quot;&quot;</span>
+        
+        <span class="n">stress</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">):</span>
+            <span class="n">YM</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="c1"># Young&#39;s modulus</span>
+            
+            <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+            <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_T</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+
+            <span class="n">C</span> <span class="o">=</span> <span class="n">YM</span><span class="o">/</span><span class="n">L</span> <span class="o">*</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span> <span class="o">@</span> <span class="n">T</span> <span class="p">)</span>
+            <span class="n">element_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_element_conn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="n">d_el</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">displacements</span><span class="p">[</span><span class="n">element_conn</span><span class="p">]</span>
+            <span class="n">stress</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">C</span> <span class="o">@</span> <span class="n">d_el</span>
+            
+        <span class="k">return</span> <span class="n">stress</span></div>
+
+<div class="viewcode-block" id="TrussSolver2D.get_Kel_global"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D.get_Kel_global">[docs]</a>    <span class="k">def</span> <span class="nf">get_Kel_global</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Implementation of get_Kel_global method for BaseSolver class&quot;&quot;&quot;</span>
+        
+        <span class="n">Kel_local</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_Kel_local</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_T</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">T</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">Kel_local</span> <span class="o">@</span> <span class="n">T</span></div>
+
+<div class="viewcode-block" id="TrussSolver2D.get_Kel_local"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D.get_Kel_local">[docs]</a>    <span class="k">def</span> <span class="nf">get_Kel_local</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        returns the element stiffness matrix in local coordinates </span>
+<span class="sd">        for 2D truss structural elements.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">coefficient</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_stiffness</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="n">Kel_local</span> <span class="o">=</span> <span class="n">coefficient</span> \
+                    <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                                <span class="p">(</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                                <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                                <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                                <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                            <span class="p">])</span>
+        <span class="k">return</span> <span class="n">Kel_local</span> </div>
+
+<div class="viewcode-block" id="TrussSolver2D.get_T"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D.get_T">[docs]</a>    <span class="k">def</span> <span class="nf">get_T</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the transformation matrix T of given element. &quot;&quot;&quot;</span>
+        <span class="c1"># Calculate cos and sin value for given element</span>
+        <span class="n">directional_cosine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;dcos&#39;</span><span class="p">,</span> 
+                                                               <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">directional_cosine</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">directional_cosine</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                    <span class="p">(</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span><span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">),</span>
+                    <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">)])</span>
+
+        <span class="k">return</span> <span class="n">T</span></div>
+    
+<div class="viewcode-block" id="TrussSolver2D.element_stiffness"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D.element_stiffness">[docs]</a>    <span class="k">def</span> <span class="nf">element_stiffness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; return the stiffness of a single truss element. &quot;&quot;&quot;</span>
+        <span class="n">area</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">youngs_modulus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">element_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">area</span> <span class="o">*</span> <span class="n">youngs_modulus</span> <span class="o">/</span> <span class="n">element_length</span></div>
+    
+<div class="viewcode-block" id="TrussSolver2D.interpolate_shape"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TrussSolver2D.interpolate_shape">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mag_factor</span><span class="p">,</span> <span class="n">sub_element_num</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Note: Since truss uses linear shape functions, no interpolation is used.</span>
+<span class="sd">        The method returns the deformed nodal positon of elements to make </span>
+<span class="sd">        output utility usage consistent.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">new_nodal_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_nodes</span><span class="p">):</span>
+            <span class="n">new_nodal_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">new_nodal_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> \
+                <span class="o">+</span> <span class="n">mag_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">displacements</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">]</span>
+            <span class="n">new_nodal_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span> \
+                <span class="o">+</span> <span class="n">mag_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">displacements</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">interpolated_nodal_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">,</span> 
+                                           <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="c1"># need to offset by the new nodal position</span>
+        <span class="k">for</span> <span class="n">element_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">):</span>
+            <span class="n">nodal_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;node_ind&#39;</span><span class="p">,</span> 
+                                                        <span class="n">element_index</span><span class="p">)</span>
+            <span class="n">interpolated_nodal_data</span><span class="p">[</span><span class="n">element_index</span><span class="p">,</span><span class="mi">0</span><span class="p">,:]</span> <span class="o">=</span> \
+                <span class="n">new_nodal_data</span><span class="p">[</span><span class="n">nodal_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">interpolated_nodal_data</span><span class="p">[</span><span class="n">element_index</span><span class="p">,</span><span class="mi">1</span><span class="p">,:]</span> <span class="o">=</span> \
+                <span class="n">new_nodal_data</span><span class="p">[</span><span class="n">nodal_indices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+            
+        <span class="k">return</span> <span class="n">interpolated_nodal_data</span></div></div>
+
+
+<div class="viewcode-block" id="FrameSolver2D"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D">[docs]</a><span class="k">class</span> <span class="nc">FrameSolver2D</span><span class="p">(</span><span class="n">TrussSolver2D</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Solver class for 2D frame structures. &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">):</span>
+        <span class="n">BaseSolver</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fill_Kel_local</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_matrix</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Helper function to fill in Kel_local. &quot;&quot;&quot;</span>
+
+        <span class="n">element_dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">node_per_element</span>
+        <span class="n">Kel_local_component</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">element_dof</span><span class="p">,</span> <span class="n">element_dof</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">input_matrix</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">input_matrix</span><span class="p">)):</span>
+                <span class="n">Kel_local_component</span><span class="p">[</span><span class="n">conn</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">conn</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="o">=</span> <span class="n">input_matrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Kel_local_component</span>
+
+
+<div class="viewcode-block" id="FrameSolver2D.Kel_local_axial"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.Kel_local_axial">[docs]</a>    <span class="k">def</span> <span class="nf">Kel_local_axial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Get the Kel_local (element stiffness matrix in local coordinates) of</span>
+<span class="sd">        the axial components.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">stiffness</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_stiffness</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="n">Kel_axial_1D</span> <span class="o">=</span> <span class="n">stiffness</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+        <span class="n">axial_conn</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill_Kel_local</span><span class="p">(</span><span class="n">Kel_axial_1D</span><span class="p">,</span> <span class="n">axial_conn</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="FrameSolver2D.Kel_local_bending"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.Kel_local_bending">[docs]</a>    <span class="k">def</span> <span class="nf">Kel_local_bending</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Get the Kel_local (element stiffness matrix in local coordinates) of</span>
+<span class="sd">        the bending components.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">E</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;I&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">Kel_bending_primitive</span> <span class="o">=</span>  <span class="n">E</span><span class="o">*</span><span class="n">I</span><span class="o">/</span><span class="n">L</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                                    <span class="p">(</span> <span class="mi">12</span>  <span class="p">,</span> <span class="mi">6</span><span class="o">*</span><span class="n">L</span>   <span class="p">,</span><span class="o">-</span><span class="mi">12</span>  <span class="p">,</span> <span class="mi">6</span><span class="o">*</span><span class="n">L</span>   <span class="p">),</span>
+                                    <span class="p">(</span>  <span class="mi">6</span><span class="o">*</span><span class="n">L</span><span class="p">,</span> <span class="mi">4</span><span class="o">*</span><span class="n">L</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">6</span><span class="o">*</span><span class="n">L</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">L</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span>
+                                    <span class="p">(</span><span class="o">-</span><span class="mi">12</span>  <span class="p">,</span><span class="o">-</span><span class="mi">6</span><span class="o">*</span><span class="n">L</span>   <span class="p">,</span> <span class="mi">12</span>  <span class="p">,</span><span class="o">-</span><span class="mi">6</span><span class="o">*</span><span class="n">L</span>   <span class="p">),</span>
+                                    <span class="p">(</span>  <span class="mi">6</span><span class="o">*</span><span class="n">L</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">L</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">6</span><span class="o">*</span><span class="n">L</span><span class="p">,</span> <span class="mi">4</span><span class="o">*</span><span class="n">L</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                                   <span class="p">])</span>
+        <span class="n">bending_conn</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">,</span> <span class="mi">2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fill_Kel_local</span><span class="p">(</span><span class="n">Kel_bending_primitive</span><span class="p">,</span> <span class="n">bending_conn</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="FrameSolver2D.get_Kel_local"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.get_Kel_local">[docs]</a>    <span class="k">def</span> <span class="nf">get_Kel_local</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        combining the bending components and axial components of the stiffness</span>
+<span class="sd">        matrix.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Kel_local_axial</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span> \
+                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">Kel_local_bending</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FrameSolver2D.get_T"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.get_T">[docs]</a>    <span class="k">def</span> <span class="nf">get_T</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the transformation matrix T of given element. &quot;&quot;&quot;</span>
+
+        <span class="c1"># Calculate cos and sin value for given element</span>
+        <span class="n">directional_cosine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;dcos&#39;</span><span class="p">,</span> 
+                                                                <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">directional_cosine</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">directional_cosine</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                    <span class="p">(</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span><span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                    <span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+
+        <span class="k">return</span> <span class="n">T</span></div>
+    
+<div class="viewcode-block" id="FrameSolver2D.interpolate_shape"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.interpolate_shape">[docs]</a>    <span class="k">def</span> <span class="nf">interpolate_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mag_factor</span><span class="p">,</span><span class="n">sub_element_num</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a 3D array, with each element corresponds to a 2D array that</span>
+<span class="sd">        represents the nodal coordinates after the deformation and the effect</span>
+<span class="sd">        of scale factor in x and y direction for every </span>
+<span class="sd">        interpolation points. The array is used to plot the deformation shape.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">interpolated_nodal_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">,</span> 
+                                           <span class="n">sub_element_num</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        
+        <span class="c1"># need to offset by the new nodal position</span>
+        <span class="k">for</span> <span class="n">element_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span><span class="p">):</span>
+            <span class="n">interpolated_nodal_data</span><span class="p">[</span><span class="n">element_index</span><span class="p">,:,:]</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_interpolate_points</span><span class="p">(</span><span class="n">element_index</span><span class="p">,</span> <span class="n">mag_factor</span><span class="p">,</span> 
+                                             <span class="n">sub_element_num</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">interpolated_nodal_data</span></div>
+
+<div class="viewcode-block" id="FrameSolver2D.get_interpolate_points"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.get_interpolate_points">[docs]</a>    <span class="k">def</span> <span class="nf">get_interpolate_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> 
+            <span class="n">scale_factor</span><span class="p">,</span> <span class="n">sub_element_num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a 2D array of nodal coordinates after deformation and the </span>
+<span class="sd">        effect of the deformation scale factor.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># get local displacement of the two nodes</span>
+        <span class="n">node_ind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;node_ind&#39;</span><span class="p">,</span> 
+                                                    <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">dof</span>
+        <span class="n">disp_ind</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">node_ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dof</span><span class="p">,</span> <span class="p">(</span><span class="n">node_ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">dof</span><span class="p">)),</span> 
+                    <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">node_ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">dof</span><span class="p">,</span> <span class="p">(</span><span class="n">node_ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">dof</span><span class="p">))]</span>
+        
+        <span class="n">element_disp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dof</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">element_disp</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">dof</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">displacements</span><span class="p">[</span><span class="n">disp_ind</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">element_disp</span><span class="p">[</span><span class="n">dof</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">element_disp</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">displacements</span><span class="p">[</span><span class="n">disp_ind</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+        
+        <span class="n">local_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_T</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span> <span class="o">@</span> <span class="n">element_disp</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;L&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="c1"># position for sub element points after deflection</span>
+        <span class="n">interpolation_pts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">sub_element_num</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">interpolation_pts</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">sub_element_num</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        
+
+        <span class="n">axial_nodal_disp</span> <span class="o">=</span> <span class="n">local_disp</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">]]</span>
+        <span class="n">beam_nodal_disp</span> <span class="o">=</span> <span class="n">local_disp</span><span class="p">[[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]]</span>
+        
+        <span class="n">directional_cosine</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;dcos&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">directional_cosine</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">directional_cosine</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">transform_2d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">C</span><span class="p">,</span> <span class="n">S</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">C</span><span class="p">)])</span>
+        
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">interpolation_pts</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]):</span>
+            
+            <span class="n">interpolation_pts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_interpolated_axial_disp</span><span class="p">(</span>
+                        <span class="n">x</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">axial_nodal_disp</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale_factor</span>
+            <span class="n">interpolation_pts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_beam_deflection</span><span class="p">(</span>
+                        <span class="n">x</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">beam_nodal_disp</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale_factor</span>
+            <span class="n">interpolation_pts</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">transform_2d</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">interpolation_pts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>\
+                        <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_first_nodal_position</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">interpolation_pts</span></div>
+
+    
+    <span class="k">def</span> <span class="nf">_get_first_nodal_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Get the first nodal position of an element. The first nodal position </span>
+<span class="sd">        is used to locate the element when doing transformation for interpolate</span>
+<span class="sd">        shape.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">nodal_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;node_ind&#39;</span><span class="p">,</span> 
+                                                          <span class="n">element_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">nodal_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+<div class="viewcode-block" id="FrameSolver2D.get_beam_deflection"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.get_beam_deflection">[docs]</a>    <span class="k">def</span> <span class="nf">get_beam_deflection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">beam_nodal_disp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the beam deflection of interpolation points</span>
+<span class="sd">        by using the shape functions. </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>        
+
+        <span class="c1"># Hermite cubic interpolation function</span>
+        <span class="n">N1</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">L</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">3</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">L</span> <span class="o">+</span> <span class="n">L</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">N2</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">L</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">L</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">L</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span> <span class="o">*</span> <span class="n">L</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">N3</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">L</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">L</span><span class="p">)</span>
+        <span class="n">N4</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">L</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">L</span> <span class="o">-</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">L</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        
+        <span class="n">N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">N1</span><span class="p">,</span> <span class="n">N2</span><span class="p">,</span> <span class="n">N3</span><span class="p">,</span> <span class="n">N4</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">N</span> <span class="o">@</span> <span class="n">beam_nodal_disp</span></div>
+    
+<div class="viewcode-block" id="FrameSolver2D.get_interpolated_axial_disp"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.FrameSolver2D.get_interpolated_axial_disp">[docs]</a>    <span class="k">def</span> <span class="nf">get_interpolated_axial_disp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> 
+                                    <span class="n">lement_index</span><span class="p">,</span> <span class="n">axial_nodal_disp</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Get the axial displacements of interpolation points</span>
+<span class="sd">        by using the shape functions. </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>  
+        <span class="n">N</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="o">/</span><span class="n">L</span><span class="p">,</span> <span class="n">x</span><span class="o">/</span><span class="n">L</span><span class="p">])</span>  <span class="c1"># linear axial interpolation function</span>
+        <span class="k">return</span> <span class="n">N</span> <span class="o">@</span> <span class="n">axial_nodal_disp</span></div></div>
+
+
+<div class="viewcode-block" id="TriangularElementSolver"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver">[docs]</a><span class="k">class</span> <span class="nc">TriangularElementSolver</span><span class="p">(</span><span class="n">BaseSolver</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Constant Strain Triangular (CST) elements for 2D structures. &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        In addition to BaseSolver operation, the solver also evaluates</span>
+<span class="sd">        the stress and strain for each elements.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">BaseSolver</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SolverInput</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stress</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">strain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_stress_and_strain</span><span class="p">()</span>
+
+<div class="viewcode-block" id="TriangularElementSolver.stress_strain_matrix"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.stress_strain_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">stress_strain_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">is_plane_strain</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the stress-strain matrix (the constitutive matrix) &quot;&quot;&quot;</span>
+
+
+        <span class="n">nu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;nu&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;E&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_plane_strain</span><span class="p">:</span>
+            <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span><span class="n">nu</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="n">nu</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,(</span><span class="mi">1</span><span class="o">-</span><span class="n">nu</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)])</span> <span class="o">*</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">nu</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">D</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="mi">1</span><span class="o">-</span><span class="n">nu</span><span class="p">,</span><span class="n">nu</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="n">nu</span><span class="p">,</span><span class="mi">1</span><span class="o">-</span><span class="n">nu</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,(</span><span class="mi">1</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">nu</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)])</span> \
+                <span class="o">*</span> <span class="n">E</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">nu</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">nu</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">D</span></div>
+
+<div class="viewcode-block" id="TriangularElementSolver.strain_displacement_matrix"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.strain_displacement_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">strain_displacement_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the strain-displacement matrix (the constitutive matrix) &quot;&quot;&quot;</span>
+
+        <span class="n">Coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;nodal_coord&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">dydeta</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># -y1 + y3</span>
+        <span class="n">dydxi</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>   <span class="c1"># -y1 + y2</span>
+        <span class="n">dxdeta</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># -x1 + x3</span>
+        <span class="n">dxdxi</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># -x1 + x2</span>
+        
+        <span class="n">B11</span> <span class="o">=</span>  <span class="n">dydeta</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">dydxi</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (-y1 + y3)*(-1) - (-y1 + y2) * (-1) </span>
+        <span class="n">B13</span> <span class="o">=</span>  <span class="n">dydeta</span><span class="o">*</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">dydxi</span><span class="o">*</span><span class="p">(</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># (-y1 + y3)*( 1) - (-y1 + y2) * ( 0)</span>
+        <span class="n">B15</span> <span class="o">=</span>  <span class="n">dydeta</span><span class="o">*</span><span class="p">(</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">dydxi</span><span class="o">*</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># (-y1 + y3)*( 0) - (-y1 + y2) * ( 1)</span>
+        
+        <span class="n">B22</span> <span class="o">=</span> <span class="o">-</span><span class="n">dxdeta</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">dxdxi</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># -(-x1 + x3)*(-1) + (-x1 + x2) * (-1) </span>
+        <span class="n">B24</span> <span class="o">=</span> <span class="o">-</span><span class="n">dxdeta</span><span class="o">*</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">dxdxi</span><span class="o">*</span><span class="p">(</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># -(-x1 + x3)*( 1) + (-x1 + x2) * ( 0) </span>
+        <span class="n">B26</span> <span class="o">=</span> <span class="o">-</span><span class="n">dxdeta</span><span class="o">*</span><span class="p">(</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">dxdxi</span><span class="o">*</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># -(-x1 + x3)*( 0) + (-x1 + x2) * ( 1) </span>
+
+        <span class="n">BJ</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">B11</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">B13</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">B15</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="n">B22</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">B24</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">B26</span><span class="p">),</span>
+                       <span class="p">(</span><span class="n">B22</span><span class="p">,</span><span class="n">B11</span><span class="p">,</span><span class="n">B24</span><span class="p">,</span><span class="n">B13</span><span class="p">,</span><span class="n">B26</span><span class="p">,</span><span class="n">B15</span><span class="p">)])</span>
+        <span class="n">Jdet</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">dxdxi</span><span class="p">,</span><span class="n">dydxi</span><span class="p">),(</span><span class="n">dxdeta</span><span class="p">,</span><span class="n">dydeta</span><span class="p">)]))</span>
+
+        <span class="n">B</span> <span class="o">=</span> <span class="n">BJ</span><span class="o">/</span><span class="n">Jdet</span>
+        <span class="k">return</span> <span class="n">B</span></div>
+
+<div class="viewcode-block" id="TriangularElementSolver.get_Jacobian_det"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.get_Jacobian_det">[docs]</a>    <span class="k">def</span> <span class="nf">get_Jacobian_det</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the determinant of the Jacobian matrix &quot;&quot;&quot;</span>
+
+        <span class="n">Coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;nodal_coord&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">dydeta</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> 
+        <span class="n">dydxi</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> 
+        <span class="n">dxdeta</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dxdxi</span> <span class="o">=</span> <span class="o">-</span><span class="n">Coord</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">Coord</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Jdet</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">dxdxi</span><span class="p">,</span><span class="n">dydxi</span><span class="p">),(</span><span class="n">dxdeta</span><span class="p">,</span><span class="n">dydeta</span><span class="p">)])</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">Jdet</span></div>
+    
+<div class="viewcode-block" id="TriangularElementSolver.get_Kel_global"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.get_Kel_global">[docs]</a>    <span class="k">def</span> <span class="nf">get_Kel_global</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get element stiffness matrix. &quot;&quot;&quot;</span>
+
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">strain_displacement_matrix</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stress_strain_matrix</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="n">Jdet</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_Jacobian_det</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="n">thickness</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="n">element_index</span><span class="p">)</span>
+        <span class="n">Kel</span> <span class="o">=</span> <span class="n">thickness</span> <span class="o">*</span> <span class="n">Jdet</span> <span class="o">*</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">D</span> <span class="o">@</span> <span class="n">B</span><span class="p">)</span> 
+        <span class="k">return</span> <span class="n">Kel</span></div>
+
+<div class="viewcode-block" id="TriangularElementSolver.get_element_strain"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.get_element_strain">[docs]</a>    <span class="k">def</span> <span class="nf">get_element_strain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">nodal_displacement</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the strain of the given element index. &quot;&quot;&quot;</span>
+
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">strain_displacement_matrix</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">B</span> <span class="o">@</span> <span class="n">nodal_displacement</span></div>
+    
+<div class="viewcode-block" id="TriangularElementSolver.get_element_stress"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.get_element_stress">[docs]</a>    <span class="k">def</span> <span class="nf">get_element_stress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_index</span><span class="p">,</span> <span class="n">element_strain</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the stress of the given element index. &quot;&quot;&quot;</span>
+
+        <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stress_strain_matrix</span><span class="p">(</span><span class="n">element_index</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">D</span> <span class="o">@</span> <span class="n">element_strain</span>   </div>
+    
+<div class="viewcode-block" id="TriangularElementSolver.get_stress_and_strain"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solvers.TriangularElementSolver.get_stress_and_strain">[docs]</a>    <span class="k">def</span> <span class="nf">get_stress_and_strain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Get the stress and strain matrix containing the values for each</span>
+<span class="sd">        elements.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">num_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">num_of_elements</span>
+        <span class="n">strain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_elements</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="n">stress</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_elements</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_elements</span><span class="p">):</span>
+            <span class="n">el_disp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">displacements</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">global_conn</span><span class="p">[</span><span class="n">el</span><span class="p">]])</span>
+            <span class="n">strain</span><span class="p">[</span><span class="n">el</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_element_strain</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">el_disp</span><span class="p">)</span>
+            <span class="n">Coord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol_in</span><span class="o">.</span><span class="n">get_element_property</span><span class="p">(</span><span class="s1">&#39;nodal_coord&#39;</span><span class="p">,</span> 
+                                                      <span class="n">el</span><span class="p">)</span>
+            <span class="n">stress</span><span class="p">[</span><span class="n">el</span><span class="p">,:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_element_stress</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="n">strain</span><span class="p">[</span><span class="n">el</span><span class="p">,</span> <span class="p">:])</span>
+        
+        <span class="k">return</span> <span class="n">stress</span><span class="p">,</span> <span class="n">strain</span></div></div>
+    
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/basicfem.html">basicfem – main script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/lib.html">lib – library for basicfem solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/mshreader.html">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

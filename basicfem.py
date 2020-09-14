@@ -1,4 +1,4 @@
-""" Main entry of the program """
+""" basicfem.py is the main script to execute the Basicfem solver. """
 
 import sys
 import os
@@ -10,20 +10,30 @@ from lib.output_utility import *
 from lib.solver_input import *
 
 def main():
+    """ 
+    Main function to read in command line input, processing directories and
+    run respective solvers. The script takes two argument -- an input directory
+    name and an output directory name. The input directory should locate in the 
+    local directory and needs to contain necessary txt files for basicfem 
+    solvers. It can also be an xlsx file that contains all the required input. 
+    The output directory will be generated if not exists, or being overwritten.
+    
+    """
+
     if len(sys.argv) != 3:
         print("usage: python basicfem.py <input_directory> <output_directory>")
         print("       <input_directory> can also be a single xlsx file",
               "with all required input.")
         sys.exit(1)
     
-    filename = sys.argv[1]
-    filename = filename.lstrip('./')
-    if not os.path.exists(filename):
+    input_dir = sys.argv[1]
+    input_dir = input_dir.lstrip('./')
+    if not os.path.exists(input_dir):
         print("Input directory or file does not exist.")
         sys.exit(1)
     
-    if os.path.isfile(filename):
-        param = read_param(filename)
+    if os.path.isfile(input_dir):
+        param = read_param(input_dir)
     else:
         param = read_param('./' +sys.argv[1] + '/param.txt')
 
@@ -40,7 +50,7 @@ def main():
         scale_factor = float(param['deformation_scale_factor'])
 
     if problem_type.lower() == "truss":
-        input_ = TrussInput2D(filename)
+        input_ = TrussInput2D(input_dir)
         result = TrussSolver2D(input_)
         save_data(result.stress,'element_stresses.txt', dir_name=sys.argv[2])
         save_data(result.displacements, 'nodal_displacements.txt', 
@@ -48,14 +58,14 @@ def main():
         plot_deformed_shape_1D(result, scale_factor, output_path)
 
     elif problem_type.lower() == "frame":
-        input_ = TrussInput2D(filename)
+        input_ = TrussInput2D(input_dir)
         result = FrameSolver2D(input_)
         save_data(result.displacements, 'nodal_displacements.txt',
                   dir_name=sys.argv[2])
         plot_deformed_shape_1D(result, scale_factor, output_path)
 
     elif problem_type.lower() == '2d':
-        input_ = TriangularElementInput(filename)
+        input_ = TriangularElementInput(input_dir)
         result = TriangularElementSolver(input_)
         plot_deformation_shape_2D(input_.nodal_data, input_.element_data, 
         result.displacements, scale_factor, output_path)
@@ -74,7 +84,22 @@ def main():
     print("Solver process completed.")
 
 def read_param(param_filename):
-    """ read the param file given by the user. """
+    """ Read the param file to set the solver related parameters.
+
+    The param file will either be an param.txt file inside the input directory,
+    or the Param page inside the input xlsx file.
+
+    Parameters
+    ----------
+    param_filename : str
+        The xlsx file name, or the processed path to the param.txt file.
+    
+    Returns
+    -------
+    dict
+        The dictionary contains solver related paramters.
+
+    """
 
     if not os.path.isfile(param_filename):
         return None
@@ -96,6 +121,20 @@ def read_param(param_filename):
     return param
 
 def set_param_guide():
+    """ Command line prompt to guide the users setting up parameters.
+    
+    In the case when param file does not exist, this function will guide the
+    users to provide the necessary paramters for solver. Note that this guide
+    will keep most of the parameters default, only set those that is needed to
+    be assigned for solver to run.
+    
+    Returns
+    -------
+    tuple
+        Parameters necessary for the solver.
+    
+    """
+
     print("param file/page does not exists. Please specify:")
     problem_type = input("Problem type? (`truss`, `frame`, or `2d`): ")
     while problem_type not in ['truss','frame','2d']:
@@ -110,10 +149,24 @@ def set_param_guide():
     
     return problem_type, scale_factor 
     
-
-
 def plot_contour_batch(fem_result, scale_factor, output_path, 
                        plot_on_deformed=True):
+    """ Generate all the contour plot available. Only used for 2d elements. 
+    
+    Parameters
+    ----------
+    fem_result: BaseSolver
+        A Solver object contains the analysis result.
+    scale_factor : float
+        The deformation scale factor assigned in the param.
+    output_path : str 
+        The path to the output directory assigned by the user.
+    plot_on_deformed : bool
+        Flag that determines if the contour is plotted on the deformed
+        structures. Default is True.
+
+    """
+    
     if plot_on_deformed:
         plot_contour(fem_result, "stress", 'xx', 'sigma_xx', scale_factor, 
                 output_path)

@@ -1,0 +1,478 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>lib.solver_input &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for lib.solver_input</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; solver_input module contains classes that represents the input data&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+
+<div class="viewcode-block" id="SolverInput"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solver_input.SolverInput">[docs]</a><span class="k">class</span> <span class="nc">SolverInput</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">ABCMeta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    SolverInput is the object representing the input data of the </span>
+<span class="sd">    structure to be solved.</span>
+
+<span class="sd">    This is a abstract class that cannot be instantiated, served as a base </span>
+<span class="sd">    class for all the specific input data object.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source_name : str</span>
+<span class="sd">        The name of the input directory or the input xlsx file </span>
+<span class="sd">        containing struture&#39;s data.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    node_per_element: int</span>
+<span class="sd">        Number of node per element.</span>
+
+<span class="sd">    dof : int</span>
+<span class="sd">        Degree of freedoms of nodes.</span>
+
+<span class="sd">    num_of_nodes : int</span>
+<span class="sd">        Total number of nodes of the structure.</span>
+
+<span class="sd">    num_of_elements : int</span>
+<span class="sd">        Total number of elements of the structure.</span>
+
+<span class="sd">    nodal_data : numpy.ndarray</span>
+<span class="sd">        An array containing the nodal labels and nodal coordinates. </span>
+<span class="sd">        The structure is as follows:</span>
+
+<span class="sd">        1st column : node labels</span>
+
+<span class="sd">        2nd column : x coordinate of the node</span>
+
+<span class="sd">        3rd column : y coordinate of the node</span>
+
+<span class="sd">        4th column : z coordinate of the node (if applicable)</span>
+
+<span class="sd">    element_data : numpy.ndarray</span>
+<span class="sd">        An array containing the cooresponding nodes and properties </span>
+<span class="sd">        of the elements. The structure is as follows:</span>
+
+<span class="sd">        1st column : element labels</span>
+
+<span class="sd">        2nd column : first nodes</span>
+
+<span class="sd">        3rd column : second nodes</span>
+
+<span class="sd">        4th column : property number (see properties array)</span>
+
+<span class="sd">    bound_con : numpy.ndarray</span>
+<span class="sd">        an array containing the nodal fixed boundary conditions of </span>
+<span class="sd">        the problem. The 1st column is the corresponding nodal labels,</span>
+<span class="sd">        the remaining columns corresponds to conditions in x, y, and </span>
+<span class="sd">        z coordinates. 1 represents fixed, 0 represents fixed.</span>
+<span class="sd">        Nodes not included in this array are treated as free nodes.</span>
+<span class="sd">    </span>
+<span class="sd">    bound_con_nonhomo : numpy.ndarray</span>
+<span class="sd">        An array containing the non-homogeneous conditions.</span>
+<span class="sd">        Similar structure as bound_con, except that columns </span>
+<span class="sd">        corresponding x, y, and z coodinates are the magnitude</span>
+<span class="sd">        of displacements.</span>
+
+<span class="sd">    nodal_forces : numpy.ndarray</span>
+<span class="sd">        An array containing the external nodal forces. Similar </span>
+<span class="sd">        structure as bound_con, except that the columns</span>
+<span class="sd">        corresponding x, y, and z coordinates are the magnitude of</span>
+<span class="sd">        displacements.</span>
+<span class="sd">    </span>
+<span class="sd">    properties : numpy.ndarray</span>
+<span class="sd">        an array containing the properties of all elements. The </span>
+<span class="sd">        structure is as follows:</span>
+
+<span class="sd">        1st column : property labels corresponds to array &#39;element_data&#39;</span>
+
+<span class="sd">        2nd column : material number corresponds to array &#39;materials&#39;</span>
+
+<span class="sd">        3rd column : cross-sectional area of the cooresponding elements.</span>
+
+<span class="sd">        4th column : z Moment of inertia of the corresponding elements.</span>
+<span class="sd">    </span>
+<span class="sd">    materials : numpy.ndarray</span>
+<span class="sd">        an array containing the properties of all elements. The </span>
+<span class="sd">        structure is as follows:</span>
+
+<span class="sd">        1st column : material labels corresponds to array &#39;properties&#39;</span>
+
+<span class="sd">        2nd column : Young&#39;s modulus</span>
+
+<span class="sd">        3rd column : Density of the material</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    get_element_property(property_type, element_num, is_label=False)                                    </span>
+<span class="sd">        returns the property of a single element.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_name</span><span class="p">):</span>
+        <span class="k">if</span>  <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s1">&#39;./&#39;</span><span class="o">+</span><span class="n">source_name</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read_excel_input</span><span class="p">(</span><span class="n">source_name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read_txt_input</span><span class="p">(</span><span class="n">source_name</span><span class="p">)</span>
+
+        <span class="nd">@property</span>
+        <span class="nd">@abstractmethod</span>
+        <span class="k">def</span> <span class="nf">node_per_element</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="nd">@property</span>
+        <span class="nd">@abstractmethod</span>
+        <span class="k">def</span> <span class="nf">dof</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="nd">@property</span>
+        <span class="nd">@abstractmethod</span>
+        <span class="k">def</span> <span class="nf">num_of_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="nd">@property</span>
+        <span class="nd">@abstractmethod</span>
+        <span class="k">def</span> <span class="nf">num_of_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="nd">@property</span>
+        <span class="nd">@abstractmethod</span>
+        <span class="k">def</span> <span class="nf">element_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_read_excel_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; get input data of the structure from a excel file. &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">read_excel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span> <span class="o">=</span> <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;N&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span> <span class="o">=</span> <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;E&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span> <span class="o">=</span> <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;BC&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span> <span class="o">=</span> \
+            <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;BC_NH&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_forces</span> <span class="o">=</span> <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;F&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;P&#39;</span> <span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="n">read_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sheet_name</span> <span class="o">=</span> <span class="s1">&#39;M&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+    
+    <span class="k">def</span> <span class="nf">_read_txt_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        get input data of the structure from a directory contains </span>
+<span class="sd">        txt files </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">input_dir_path</span> <span class="o">=</span> <span class="s1">&#39;./&#39;</span> <span class="o">+</span> <span class="n">dirname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/nodal_data.txt&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/element_data.txt&#39;</span><span class="p">,</span> 
+                                       <span class="n">ndmin</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/bound_con.txt&#39;</span><span class="p">,</span> 
+                                    <span class="n">ndmin</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/bound_con_nonhomo.txt&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span> <span class="o">=</span> \
+                <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/bound_con_nonhomo.txt&#39;</span><span class="p">,</span>
+                <span class="n">ndmin</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_forces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/nodal_forces.txt&#39;</span><span class="p">,</span> 
+                                       <span class="n">ndmin</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/properties.txt&#39;</span><span class="p">,</span>
+                                     <span class="n">ndmin</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">input_dir_path</span> <span class="o">+</span> <span class="s1">&#39;/materials.txt&#39;</span><span class="p">,</span> 
+                                    <span class="n">ndmin</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span>        
+
+<div class="viewcode-block" id="SolverInput.get_element_property"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solver_input.SolverInput.get_element_property">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_element_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_type</span><span class="p">,</span> <span class="n">element_num</span><span class="p">,</span> <span class="n">is_label</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the property of a single elements. </span>
+<span class="sd">            </span>
+<span class="sd">            parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            property_type : str </span>
+<span class="sd">                A string that indicates the property to return.</span>
+
+
+<span class="sd">            element_num : int</span>
+<span class="sd">                an integer indicates the index or the label of </span>
+<span class="sd">                the element. </span>
+
+<span class="sd">            is_label : bool</span>
+<span class="sd">                a boolean indicates if the variable &#39;element_num&#39; is a</span>
+<span class="sd">                label. If it is true, the function will search for the</span>
+<span class="sd">                element property using the element&#39;s label. If it is </span>
+<span class="sd">                false, the function will search for the element property</span>
+<span class="sd">                using the index of the array &#39;element_data&#39;.</span>
+<span class="sd">                The default is false.     </span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+
+
+<div class="viewcode-block" id="TrussInput2D"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solver_input.TrussInput2D">[docs]</a><span class="k">class</span> <span class="nc">TrussInput2D</span><span class="p">(</span><span class="n">SolverInput</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; TrussInput object represents input data for truss structures.</span>
+
+<span class="sd">    See SolverInput class for more descriptions on parameters and attributes. </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="n">SolverInput</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_per_element</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_of_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_of_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">element_dim</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="TrussInput2D.get_element_property"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solver_input.TrussInput2D.get_element_property">[docs]</a>    <span class="k">def</span> <span class="nf">get_element_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_type</span><span class="p">,</span> <span class="n">element_num</span><span class="p">,</span> <span class="n">is_label</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">            See SolverInput for descriptions.</span>
+
+<span class="sd">            property_type options:</span>
+
+<span class="sd">            &#39;A&#39; : area</span>
+
+<span class="sd">            &#39;E&#39; : Young&#39;s modulus</span>
+
+<span class="sd">            &#39;I&#39; : moment of inertia</span>
+
+<span class="sd">            &#39;rho&#39; : material density</span>
+
+<span class="sd">            &#39;Yc&#39; : compressive yield strength</span>
+
+<span class="sd">            &#39;Yt&#39; : tensile yield strenth</span>
+
+<span class="sd">            &#39;L&#39; : element length</span>
+
+<span class="sd">            &#39;dcos&#39; : directional cosine values of the element</span>
+
+<span class="sd">            &#39;node_ind&#39; : indicies in the array &#39;nodal_data&#39;</span>
+<span class="sd">                        corresponding to the element   </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">is_label</span><span class="p">:</span>
+            <span class="n">element_num</span> <span class="o">=</span> \
+                <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">element_num</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            
+        <span class="n">property_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[</span><span class="n">element_num</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="n">property_index</span> <span class="o">=</span> \
+            <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">property_label</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">material_label</span> <span class="o">=</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="n">property_index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">material_index</span> <span class="o">=</span> \
+            <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">material_label</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;A&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="n">property_index</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;E&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">material_index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;I&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="n">property_index</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;rho&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">material_index</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;Yc&#39;</span><span class="p">:</span> <span class="c1"># compressive yield strength </span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">material_index</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;Yt&#39;</span><span class="p">:</span> <span class="c1"># tensile yield strength</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">material_index</span><span class="p">,</span><span class="mi">4</span><span class="p">]</span>        
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;L&#39;</span> <span class="ow">or</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;dcos&#39;</span> \
+                <span class="ow">or</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;node_ind&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_derived_properties</span><span class="p">(</span><span class="n">property_type</span><span class="p">,</span> <span class="n">element_num</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="k">def</span> <span class="nf">_node_derived_properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_type</span><span class="p">,</span> <span class="n">element_num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;returns the property related to the nodal data&quot;&quot;&quot;</span>
+
+        <span class="n">node1_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[</span><span class="n">element_num</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">node2_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[</span><span class="n">element_num</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;node_ind&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">node1_index</span><span class="p">,</span> <span class="n">node2_index</span><span class="p">]</span>
+
+        <span class="n">length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">length</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node1_index</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> 
+                       <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node2_index</span><span class="p">,</span> <span class="n">i</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span> 
+        <span class="n">length</span> <span class="o">=</span> <span class="n">length</span> <span class="o">**</span> <span class="mf">0.5</span>
+        
+        <span class="k">if</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;L&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cx</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node2_index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> 
+                  <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node1_index</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="n">length</span>
+            <span class="n">cy</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node2_index</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+                  <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node1_index</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="n">length</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># 2D</span>
+                <span class="n">cz</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cz</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node2_index</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span> 
+                      <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">node1_index</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span> <span class="o">/</span> <span class="n">length</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cx</span><span class="p">,</span><span class="n">cy</span><span class="p">,</span><span class="n">cz</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="TriangularElementInput"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solver_input.TriangularElementInput">[docs]</a><span class="k">class</span> <span class="nc">TriangularElementInput</span><span class="p">(</span><span class="n">SolverInput</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">SolverInput</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_per_element</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_of_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_of_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">element_dim</span> <span class="o">=</span> <span class="mi">2</span>
+
+<div class="viewcode-block" id="TriangularElementInput.get_element_property"><a class="viewcode-back" href="../../source_rst/lib.html#lib.solver_input.TriangularElementInput.get_element_property">[docs]</a>    <span class="k">def</span> <span class="nf">get_element_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">property_type</span><span class="p">,</span> <span class="n">element_num</span><span class="p">,</span> <span class="n">is_label</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            See SolverInput for descriptions.</span>
+
+<span class="sd">            property_type options:</span>
+
+<span class="sd">            &#39;t&#39; : thickness</span>
+
+<span class="sd">            &#39;E&#39; : Young&#39;s modulus</span>
+
+<span class="sd">            &#39;nu&#39; : poisson&#39;s ratio</span>
+
+<span class="sd">            &#39;node_ind&#39; : indicies in the array &#39;nodal_data&#39; corresponding </span>
+<span class="sd">            to the element.</span>
+
+<span class="sd">            &#39;nodal_coord&#39; : nodal coordinates of the given element.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">is_label</span><span class="p">:</span>
+            <span class="n">element_num</span> <span class="o">=</span> \
+                <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">element_num</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            
+        <span class="n">property_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[</span><span class="n">element_num</span><span class="p">,</span> 
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">node_per_element</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">property_index</span> <span class="o">=</span> \
+            <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">property_label</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="n">material_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="n">property_index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">material_index</span> <span class="o">=</span> \
+            <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">material_label</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;t&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="n">property_index</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;E&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">material_index</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;nu&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">material_index</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>    
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;node_ind&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_nodal_indices</span><span class="p">(</span><span class="n">element_num</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">property_type</span> <span class="o">==</span> <span class="s1">&#39;nodal_coord&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_nodal_coordinates</span><span class="p">(</span><span class="n">element_num</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_nodal_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;get nodal indices of a given element. &quot;&quot;&quot;</span>
+
+        <span class="n">nodal_indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">):</span>
+            <span class="n">nodal_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">[</span><span class="n">element_num</span><span class="p">,</span> <span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">nodal_indices</span>
+    
+    <span class="k">def</span> <span class="nf">_get_nodal_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element_num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;get nodal coorinates of a given element. &quot;&quot;&quot;</span>
+
+        <span class="n">nodal_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_nodal_indices</span><span class="p">(</span><span class="n">element_num</span><span class="p">)</span>
+        <span class="n">nodal_coord_nparray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[</span><span class="n">nodal_indices</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">nodal_coord_nparray</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/basicfem.html">basicfem – main script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/lib.html">lib – library for basicfem solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source_rst/mshreader.html">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

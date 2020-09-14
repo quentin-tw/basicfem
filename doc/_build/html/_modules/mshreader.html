@@ -1,0 +1,609 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>mshreader &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for mshreader</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">mshreader.py is a script to process the msh file into the data required for</span>
+<span class="sd">SolverInput object for a general 2D structures.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">ast</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="MshProcessor"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor">[docs]</a><span class="k">class</span> <span class="nc">MshProcessor</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    MshProcessor reads in a msh file and convert it into txt files. It also</span>
+<span class="sd">    includes methods that is used interactively in the script.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">show_obj_msg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span> <span class="n">show_obj_msg</span> <span class="o">=</span> <span class="n">show_obj_msg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_file_valid</span> <span class="o">=</span> <span class="kc">False</span> <span class="c1"># used to do simple check of the file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_msh</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bc</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bcnh</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_property</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="kc">None</span>
+        
+
+    <span class="k">def</span> <span class="nf">_read_msh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="n">node_summary</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;numEntityBlocks&quot;</span> <span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+                        <span class="s2">&quot;numNodes&quot;</span> <span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+                        <span class="s2">&quot;minNodeTag&quot;</span> <span class="p">:</span> <span class="mi">0</span><span class="p">,</span> 
+                        <span class="s2">&quot;maxNodeTag&quot;</span> <span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+
+        <span class="n">in_nodes_section</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_nodes_summary</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_node_entity</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_node_tag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_node_coord</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_node_tag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">current_entityDim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">current_entity_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">entity_stop_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># this info can later be used to assign the boundary condition</span>
+        <span class="n">entity_dict</span> <span class="o">=</span> <span class="p">{}</span> 
+
+        <span class="n">nodal_tag_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">in_elements_section</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_elements_summary</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_elements_entity</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">in_element_tag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">skip_elements</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">element_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">element_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">element_list</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="c1"># check if the file contains $Node label and #Elements label</span>
+        <span class="n">status_check</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_file_valid</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;$Nodes&quot;</span><span class="p">:</span>
+                <span class="n">in_nodes_section</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">in_nodes_summary</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">status_check</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;$EndNodes&quot;</span><span class="p">:</span>
+                <span class="n">in_nodes_section</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">in_nodes_section</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">in_nodes_summary</span><span class="p">:</span>
+                    <span class="n">str_list</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                    <span class="n">num_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">str_list</span><span class="p">))</span>
+                    <span class="p">(</span><span class="n">node_summary</span><span class="p">[</span><span class="s2">&quot;numEntityBlocks&quot;</span><span class="p">],</span> <span class="n">node_summary</span><span class="p">[</span><span class="s2">&quot;numNodes&quot;</span><span class="p">],</span>
+                    <span class="n">node_summary</span><span class="p">[</span><span class="s2">&quot;minNodeTag&quot;</span><span class="p">],</span> <span class="n">node_summary</span><span class="p">[</span><span class="s2">&quot;maxNodeTag&quot;</span><span class="p">])</span> \
+                        <span class="o">=</span> <span class="n">num_list</span>
+                    <span class="n">nodal_coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">node_summary</span><span class="p">[</span><span class="s2">&quot;numNodes&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">))</span>
+                    <span class="n">nodal_data_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">in_node_entity</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">in_nodes_summary</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">continue</span>
+                
+                <span class="k">if</span> <span class="n">in_node_entity</span><span class="p">:</span>
+                    <span class="n">entity_info_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
+                    <span class="n">entity_dict</span><span class="p">[(</span><span class="n">entity_info_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">entity_info_list</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> \
+                        <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">entity_stop_ctr</span> <span class="o">=</span> <span class="n">entity_info_list</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+                    <span class="n">in_node_entity</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">in_node_tag</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">in_node_tag</span><span class="p">:</span>
+                    <span class="n">nodal_tag_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                    <span class="n">entity_dict</span><span class="p">[(</span><span class="n">entity_info_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">entity_info_list</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> \
+                        <span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                    <span class="k">if</span> <span class="n">current_entity_ctr</span> <span class="o">&lt;</span> <span class="n">entity_stop_ctr</span><span class="p">:</span>
+                        <span class="n">current_entity_ctr</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">current_entity_ctr</span> <span class="o">==</span> <span class="n">entity_stop_ctr</span><span class="p">:</span>
+                        <span class="n">current_entity_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="n">in_node_tag</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="n">in_node_coord</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">in_node_coord</span><span class="p">:</span>
+                    <span class="n">nodal_coord</span><span class="p">[</span><span class="n">nodal_data_ctr</span><span class="p">,</span> <span class="p">:]</span> \
+                        <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]))</span>
+                    <span class="n">nodal_data_ctr</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">current_entity_ctr</span> <span class="o">&lt;</span> <span class="n">entity_stop_ctr</span><span class="p">:</span>
+                        <span class="n">current_entity_ctr</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">current_entity_ctr</span> <span class="o">==</span> <span class="n">entity_stop_ctr</span><span class="p">:</span>
+                        <span class="n">current_entity_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="n">in_node_coord</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="n">in_node_entity</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;$Elements&quot;</span><span class="p">:</span>
+                <span class="n">in_elements_section</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">in_elements_summary</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">status_check</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;$EndElements&quot;</span><span class="p">:</span>
+                <span class="n">in_elements_section</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">in_elements_section</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">in_elements_summary</span><span class="p">:</span>
+                    <span class="n">in_elements_entity</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">in_elements_summary</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">in_elements_entity</span><span class="p">:</span>
+                    <span class="n">entity_info_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
+                    
+                    <span class="c1"># skipped all non 2D elements </span>
+                    <span class="k">if</span> <span class="n">entity_info_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">2</span> \
+                            <span class="ow">and</span> <span class="n">entity_info_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>               
+                        <span class="n">skip_elements</span> <span class="o">=</span> <span class="kc">True</span>
+                    
+                    <span class="n">element_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">elements_in_block</span> <span class="o">=</span> <span class="n">entity_info_list</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="n">in_elements_entity</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">in_element_tag</span> <span class="o">=</span> <span class="kc">True</span>
+
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">in_element_tag</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_elements</span><span class="p">:</span>
+                        <span class="n">current_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()))</span>
+                        <span class="n">current_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># include property label</span>
+                        <span class="n">element_list</span> \
+                            <span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_list</span><span class="p">)</span>
+                    <span class="n">element_ctr</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                    <span class="k">if</span> <span class="n">element_ctr</span> <span class="o">==</span> <span class="n">elements_in_block</span><span class="p">:</span>
+                        <span class="n">in_element_tag</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="n">in_elements_entity</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="n">skip_elements</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="n">element_ctr</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">continue</span>
+        
+        <span class="k">if</span> <span class="mi">0</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">status_check</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">is_file_valid</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="c1"># 2D only - ignored z coordinate data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">nodal_tag_list</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">nodal_tag_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">nodal_coord</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">element_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">element_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entity_dict</span> <span class="o">=</span> <span class="n">entity_dict</span>
+
+<div class="viewcode-block" id="MshProcessor.add_bc"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.add_bc">[docs]</a>    <span class="k">def</span> <span class="nf">add_bc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_label</span><span class="p">,</span> <span class="n">input_list_label</span><span class="p">,</span> 
+               <span class="n">node_entity_tags</span><span class="p">,</span> <span class="n">x_tag</span><span class="p">,</span> <span class="n">y_tag</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">input_list_label</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;bc&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">x_tag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="n">y_tag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid x_tag or y_tag value - only 0 or 1 can be used.&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="n">input_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bc</span>
+        <span class="k">elif</span> <span class="n">input_list_label</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;bcnh&#39;</span><span class="p">:</span>
+            <span class="n">input_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bcnh</span>
+        <span class="k">elif</span> <span class="n">input_list_label</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;nf&#39;</span><span class="p">:</span>
+            <span class="n">input_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nf</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid input list label. Use &#39;bc&#39;, &#39;bcnh&#39;, or &#39;nf&#39;.&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+
+
+        <span class="k">if</span> <span class="n">method_label</span> <span class="o">==</span> <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="c1"># add by list of node tags</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node_assignments</span><span class="p">(</span><span class="n">node_entity_tags</span><span class="p">,</span> <span class="n">input_list</span><span class="p">,</span> 
+                                   <span class="n">x_tag</span><span class="p">,</span> <span class="n">y_tag</span><span class="p">,</span> <span class="s1">&#39;bound_con&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">method_label</span> <span class="o">==</span> <span class="s1">&#39;e&#39;</span><span class="p">:</span>  <span class="c1"># add by entity tuples</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node_entity_tags</span><span class="p">)</span> <span class="o">==</span> <span class="nb">tuple</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_entity_tags</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">node_entity_tags</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_dict</span><span class="p">:</span>
+                    <span class="n">node_tags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_dict</span><span class="p">[</span><span class="n">node_entity_tags</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_node_assignments</span><span class="p">(</span><span class="n">node_tags</span><span class="p">,</span> <span class="n">input_list</span><span class="p">,</span> <span class="n">x_tag</span><span class="p">,</span> <span class="n">y_tag</span><span class="p">,</span> 
+                                        <span class="s1">&#39;bound_con&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Given entity tuple does not exists.&quot;</span><span class="p">)</span>
+                    <span class="k">return</span>
+            
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">node_entity_tags</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">tuple_</span> <span class="ow">in</span> <span class="n">node_entity_tags</span><span class="p">:</span>
+                    <span class="n">node_tags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_dict</span><span class="p">[</span><span class="n">tuple_</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_node_assignments</span><span class="p">(</span><span class="n">node_tags</span><span class="p">,</span> <span class="n">input_list</span><span class="p">,</span> <span class="n">x_tag</span><span class="p">,</span> <span class="n">y_tag</span><span class="p">,</span>
+                                            <span class="s1">&#39;bound_con&#39;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">node_entity_tags</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">node_entity_tags</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;invalid entity tuple(s) input.&quot;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_node_assignments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_tags</span><span class="p">,</span> <span class="n">data_list</span><span class="p">,</span> <span class="n">x_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">,</span> <span class="n">data_str</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">node_tag</span> <span class="ow">in</span> <span class="n">node_tags</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">node_tag</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data_list</span><span class="p">]:</span>
+                <span class="n">data_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">node_tag</span><span class="p">,</span> <span class="n">x_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;node &quot;</span><span class="p">,</span> <span class="n">node_tag</span><span class="p">,</span> <span class="s2">&quot;is already added to the &quot;</span><span class="p">,</span> <span class="n">data_str</span><span class="p">)</span>
+                <span class="k">return</span>
+
+<div class="viewcode-block" id="MshProcessor.clear"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">data_str</span> <span class="o">==</span> <span class="s1">&#39;bc&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bc</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="n">data_str</span> <span class="o">==</span> <span class="s1">&#39;bcnh&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bcnh</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="n">data_str</span>  <span class="o">==</span> <span class="s1">&#39;nf&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nf</span> <span class="o">=</span> <span class="p">[]</span></div>
+    
+    <span class="c1"># currently for single property and single material</span>
+<div class="viewcode-block" id="MshProcessor.add_prop"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.add_prop">[docs]</a>    <span class="k">def</span> <span class="nf">add_prop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">thickness</span><span class="p">,</span> <span class="n">youngs_modulus</span><span class="p">,</span> <span class="n">density</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_property</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">thickness</span><span class="p">]])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="n">youngs_modulus</span><span class="p">,</span> <span class="n">density</span><span class="p">]])</span></div>
+    
+<div class="viewcode-block" id="MshProcessor.clear_prop"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.clear_prop">[docs]</a>    <span class="k">def</span> <span class="nf">clear_prop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_property</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="kc">None</span></div>
+    
+<div class="viewcode-block" id="MshProcessor.show_entities"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.show_entities">[docs]</a>    <span class="k">def</span> <span class="nf">show_entities</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">entity_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;nodes in entity &#39;</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="s1">&#39; ---&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MshProcessor.show_prop"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.show_prop">[docs]</a>    <span class="k">def</span> <span class="nf">show_prop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;bound_con assignment state---&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;bound_con_nonhomo state---&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bcnh</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;nodal_forces state---&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;properties state--&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;materials state--&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MshProcessor.save_data"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.MshProcessor.save_data">[docs]</a>    <span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">folder_name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bcnh</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodal_forces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nf</span><span class="p">)</span>
+
+
+        <span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">cwd</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">folder_name</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;nodal_data.txt&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_data</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;element_data.txt&#39;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">element_data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;bound_con.txt&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_con</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;bound_con_nonhomo.txt&#39;</span><span class="p">,</span> 
+                       <span class="bp">self</span><span class="o">.</span><span class="n">bound_con_nonhomo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_forces</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;nodal_forces.txt&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodal_forces</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_property</span><span class="p">:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;properties.txt&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">output_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span><span class="s1">&#39;materials.txt&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">materials</span><span class="p">)</span></div></div>
+        
+
+                                                                              
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------------------------------------------------------------------&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;mshreader -- read msh file from gmsh and assign boundary data.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;This script provides an interface to convert the msh file into&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;the input data format required by the basicfem.py. The nodal_data&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;and the element_data will be built once the msh file is read. The&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;bound_con, bound_con_nonhomo, nodal_forces, properties,&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;and materials&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;will need to be assigned either by entity tuples or nodal labels.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;------------------------------------------------------------------&#39;</span><span class="p">)</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">has_exception</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">is_file_valid</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter the input msh file name: &#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">MshProcessor</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--------------------------------------------------------&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The nodal_data and element_data matrices build complete.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Solver input data to be assigned.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--------------------------------------------------------&#39;</span><span class="p">)</span>
+        <span class="n">has_exception</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">is_file_valid</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">is_file_valid</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">has_exception</span> <span class="o">=</span> <span class="kc">True</span>    
+
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">is_file_valid</span> <span class="ow">or</span> <span class="n">has_exception</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Invalid msh ile content. please try again.&#39;</span><span class="p">)</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter the input msh file name: &#39;</span><span class="p">)</span>    
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">MshProcessor</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--------------------------------------------------------&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The nodal_data and element_data matrices build complete.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Solver input data to be assigned.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--------------------------------------------------------&#39;</span><span class="p">)</span>
+            <span class="n">has_exception</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">is_file_valid</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">is_file_valid</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">has_exception</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        
+
+    <span class="n">exit_flag</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">exit_flag</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Operations:&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;add   --&gt; add boundary conditions, forces or material&#39;</span> <span class="o">+</span>
+              <span class="s1">&#39;properties&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;clear --&gt; clear previously assigned data.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;show  --&gt; show the current state of mesh data.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;showm --&gt; show entity tuple - nodal groups mapping&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;save  --&gt; save data into basicfem input format&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;exit  --&gt; exit mshreader&#39;</span><span class="p">)</span>
+        <span class="n">option</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Enter an operation&#39;</span> <span class="o">+</span> 
+                        <span class="s1">&#39;(add, clear, show, showm, save, and exit): &#39;</span><span class="p">)</span>
+        <span class="n">option</span> <span class="o">=</span> <span class="n">option</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;add&#39;</span><span class="p">:</span>
+            <span class="n">option_add</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;show&#39;</span><span class="p">:</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">show_prop</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;showm&#39;</span><span class="p">:</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">show_entities</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;clear&#39;</span><span class="p">:</span>
+            <span class="n">option_clear</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;save&#39;</span><span class="p">:</span>
+            <span class="n">option_save</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;exit&#39;</span><span class="p">:</span>
+            <span class="n">exit_flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid operation.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="option_save"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.option_save">[docs]</a><span class="k">def</span> <span class="nf">option_save</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Specify a folder name in local directory. Data will be saved into&quot;</span><span class="p">)</span> 
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;this folder. If no such folder name exists, a new folder will be&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;created. If the folder exists, previous data will be overwritten.&quot;</span><span class="p">)</span>
+    <span class="n">folder_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter a folder name: &quot;</span><span class="p">)</span>
+    <span class="n">mesh</span><span class="o">.</span><span class="n">save_data</span><span class="p">(</span><span class="n">folder_name</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data saved.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="option_clear"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.option_clear">[docs]</a><span class="k">def</span> <span class="nf">option_clear</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">which data to clear? Enter one of the following label:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> 
+          <span class="s2">&quot;`bc`  -&gt; clear bound_con</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> 
+          <span class="s2">&quot;`bcnh` -&gt; clear bounr_con_nonhomo</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span>
+          <span class="s2">&quot;`nf`   -&gt; clear nodal_forces</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span>
+          <span class="s2">&quot;`prop` -&gt; clear materials and properties&quot;</span><span class="p">)</span>
+    <span class="n">option</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter a label: &quot;</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">option</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;bc&#39;</span><span class="p">,</span> <span class="s1">&#39;bcnh&#39;</span><span class="p">,</span> <span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="s1">&#39;prop&#39;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid label.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">which data to clear? Enter one of the following label:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> 
+        <span class="s2">&quot;`bc`  -&gt; clear bound_con</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> 
+        <span class="s2">&quot;`bcnh` -&gt; clear bounr_con_nonhomo</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span>
+        <span class="s2">&quot;`nf`   -&gt; clear nodal_forces</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span>
+        <span class="s2">&quot;`prop` -&gt; clear materials and properties&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">option</span> <span class="o">==</span> <span class="s1">&#39;prop&#39;</span><span class="p">:</span>
+        <span class="n">mesh</span><span class="o">.</span><span class="n">clear_prop</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mesh</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span><span class="n">option</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="n">option</span> <span class="o">+</span> <span class="s2">&quot; cleared.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="option_add"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.option_add">[docs]</a><span class="k">def</span> <span class="nf">option_add</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">What data you want to add? &#39;</span><span class="o">+</span>
+           <span class="s1">&#39;Specify the label and then the input values.&#39;</span><span class="p">)</span>
+    <span class="n">add_list_input_descriptions</span><span class="p">()</span>
+    <span class="n">val_string</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Enter label and corresponding values: &#39;</span><span class="p">)</span>
+    <span class="n">add_args</span> <span class="o">=</span> <span class="n">val_string</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">str_</span><span class="p">)</span> <span class="k">for</span> <span class="n">str_</span> <span class="ow">in</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">is_valid_add_args</span><span class="p">(</span><span class="n">add_args</span><span class="p">):</span>
+        <span class="n">add_list_input_descriptions</span><span class="p">()</span>
+        <span class="n">val_string</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Enter label and corresponding values: &#39;</span><span class="p">)</span>
+        <span class="n">add_args</span> <span class="o">=</span> <span class="n">val_string</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">str_</span><span class="p">)</span> <span class="k">for</span> <span class="n">str_</span> <span class="ow">in</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Specify the nodal entities (a tuple) or nodal labels (a list).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;The nodal labels are consistent to the label generates by the gmsh&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;software, so it might be helpful to look at the gmsh GUI and check&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;which nodal labels you want to specify.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodal entity are a mapping of entity tuples to nodal label lists,&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;and these nodal label groups are assigned by gmsh.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="n">nodal_label_input_descriptions</span><span class="p">()</span>
+    <span class="n">label_str</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Enter label and corresponding list: &#39;</span><span class="p">)</span>
+    <span class="n">label_args</span> <span class="o">=</span> <span class="n">label_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">is_valid_label_args</span><span class="p">(</span><span class="n">label_args</span><span class="p">)</span> <span class="ow">or</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;showm&#39;</span> \
+          <span class="ow">or</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;show&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;showm&#39;</span><span class="p">:</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">show_entities</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;show&#39;</span><span class="p">:</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">show_prop</span><span class="p">()</span>
+        
+        <span class="n">nodal_label_input_descriptions</span><span class="p">()</span>
+        <span class="n">label_str</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Enter label and corresponding list: &#39;</span><span class="p">)</span>
+        <span class="n">label_args</span> <span class="o">=</span> <span class="n">label_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+
+    <span class="n">label_args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">label_args</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    
+    <span class="k">if</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;prop&#39;</span><span class="p">:</span>
+        <span class="n">mesh</span><span class="o">.</span><span class="n">add_prop</span><span class="p">(</span><span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mesh</span><span class="o">.</span><span class="n">add_bc</span><span class="p">(</span><span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                     <span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="c1"># add_bc(method_label, input_list_label, node_entity_tags, x_tag, y_tag)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assigned successfully.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="is_valid_label_args"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.is_valid_label_args">[docs]</a><span class="k">def</span> <span class="nf">is_valid_label_args</span><span class="p">(</span><span class="n">label_args</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;e&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;show&#39;</span><span class="p">,</span><span class="s1">&#39;showm&#39;</span><span class="p">]</span> <span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid label. Need to be `e`, `n`, &#39;show&#39; or `showm`.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="k">if</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;showm&#39;</span> <span class="ow">and</span> <span class="n">label_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;show&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">label_args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)</span> <span class="ow">or</span> \
+               <span class="n">label_args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid values. Must be a tuple or list of numbers/tuples.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>  
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">label_args</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Invalid expression of list.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="add_list_input_descriptions"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.add_list_input_descriptions">[docs]</a><span class="k">def</span> <span class="nf">add_list_input_descriptions</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Input descriptions:&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;bc  &lt;x_tag&gt;  &lt;y_tag&gt; --&gt; boundary conditions (bound_conn)&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;bcnh  &lt;x_val&gt;   &lt;y_val&gt; --&gt; nonhomogeneous boundary conditions &#39;</span> <span class="o">+</span>
+           <span class="s1">&#39;(bound_conn_nonhomo)&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;nf &lt;x_val&gt;  &lt;y_val&gt; --&gt; nodal_forces&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;prop &lt;thickness&gt;  &lt;youngs modulus&gt;  &lt;density&gt; &#39;</span><span class="o">+</span>
+           <span class="s1">&#39;--&gt; properties and materials&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="nodal_label_input_descriptions"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.nodal_label_input_descriptions">[docs]</a><span class="k">def</span> <span class="nf">nodal_label_input_descriptions</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">To show the entity mapping, enter `showm`. To show current state&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;of added mesh data, enter `show`&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Otherwise, enter `e` or `n` follows by a list of tuples or list of&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;nodal labels&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example:&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;show  --&gt; show the current state of mesh data.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;showm  --&gt;  show nodal entity - nodal label group mapping.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;e [(0, 1), (1, 1)]  --&gt;  add all the nodes in &#39;</span> <span class="o">+</span>
+           <span class="s1">&#39;entity (0, 1) and (1, 1)&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;e (1,2)  --&gt;  add all the nodes in entity (0, 1) and (1, 1)&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;n [3,4,5,6]  --&gt;  add the nodal labels 3, 4, 5, and 6&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="is_valid_add_args"><a class="viewcode-back" href="../source_rst/mshreader.html#mshreader.is_valid_add_args">[docs]</a><span class="k">def</span> <span class="nf">is_valid_add_args</span><span class="p">(</span><span class="n">add_args</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;bc&#39;</span><span class="p">,</span> <span class="s1">&#39;bcnh&#39;</span><span class="p">,</span> <span class="s1">&#39;nf&#39;</span><span class="p">,</span> <span class="s1">&#39;prop&#39;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Invalid label.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="k">if</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;prop&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">add_args</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span> <span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Incorrect amount of input arguments.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="k">if</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;prop&#39;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">add_args</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">4</span> <span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Incorrect amount of input arguments.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span> 
+
+    <span class="k">if</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;bc&#39;</span> <span class="ow">and</span> \
+        <span class="p">(</span><span class="n">add_args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="n">add_args</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Invalid values for bc : 0 means free node and &#39;</span> <span class="o">+</span>
+                                      <span class="s1">&#39;1 means fixed node.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+
+
+            
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../source_rst/basicfem.html">basicfem – main script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../source_rst/lib.html">lib – library for basicfem solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../source_rst/mshreader.html">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

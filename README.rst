@@ -3,7 +3,7 @@ basicfem
 
 basicfem is a finite element solver library in Python for 2D trusses, frames, 
 and general 2D structures. Input data can be provided via simple txt files or 
-a .xlsx file, For  2D general structures, the input mesh can be generated 
+a xlsx file, For 2D general structures, the input mesh can be generated 
 from the Gmsh software (https://gmsh.info/). The mshreader.py can then be used 
 to convert .msh file into basicfem input format.
 

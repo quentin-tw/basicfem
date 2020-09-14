@@ -1,0 +1,9 @@
+Basicfem Modules
+================
+
+.. toctree::
+   :maxdepth: 4
+
+   basicfem
+   lib
+   mshreader

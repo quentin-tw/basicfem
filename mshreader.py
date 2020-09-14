@@ -1,10 +1,21 @@
-""" Reading gmsh file into basicfem input format """
+""" 
+mshreader.py is a script to process the msh file into the data required for
+SolverInput object for a general 2D structures.
+
+"""
 import sys
 import os
 import ast
 import numpy as np
 
 class MshProcessor:
+    """ 
+    MshProcessor reads in a msh file and convert it into txt files. It also
+    includes methods that is used interactively in the script.
+
+    """
+
+
     def __init__(self, filename, show_obj_msg=True):
         self. show_obj_msg = show_obj_msg
         self.entity_dict = {}

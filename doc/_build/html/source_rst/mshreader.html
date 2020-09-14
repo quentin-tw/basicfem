@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>mshreader – interface for reading Gmsh files &#8212; Basicfem 0.1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="lib – library for basicfem solver" href="lib.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-mshreader">
+<span id="mshreader-interface-for-reading-gmsh-files"></span><h1>mshreader – interface for reading Gmsh files<a class="headerlink" href="#module-mshreader" title="Permalink to this headline">¶</a></h1>
+<p>mshreader.py is a script to process the msh file into the data required for
+SolverInput object for a general 2D structures.</p>
+<dl class="class">
+<dt id="mshreader.MshProcessor">
+<em class="property">class </em><code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">MshProcessor</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">show_obj_msg=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>MshProcessor reads in a msh file and convert it into txt files. It also
+includes methods that is used interactively in the script.</p>
+<dl class="method">
+<dt id="mshreader.MshProcessor.add_bc">
+<code class="sig-name descname">add_bc</code><span class="sig-paren">(</span><em class="sig-param">method_label</em>, <em class="sig-param">input_list_label</em>, <em class="sig-param">node_entity_tags</em>, <em class="sig-param">x_tag</em>, <em class="sig-param">y_tag</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.add_bc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.add_bc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mshreader.MshProcessor.add_prop">
+<code class="sig-name descname">add_prop</code><span class="sig-paren">(</span><em class="sig-param">thickness</em>, <em class="sig-param">youngs_modulus</em>, <em class="sig-param">density</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.add_prop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.add_prop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mshreader.MshProcessor.clear">
+<code class="sig-name descname">clear</code><span class="sig-paren">(</span><em class="sig-param">data_str</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.clear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mshreader.MshProcessor.clear_prop">
+<code class="sig-name descname">clear_prop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.clear_prop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.clear_prop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mshreader.MshProcessor.save_data">
+<code class="sig-name descname">save_data</code><span class="sig-paren">(</span><em class="sig-param">folder_name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.save_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.save_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mshreader.MshProcessor.show_entities">
+<code class="sig-name descname">show_entities</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.show_entities"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.show_entities" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="mshreader.MshProcessor.show_prop">
+<code class="sig-name descname">show_prop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#MshProcessor.show_prop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.MshProcessor.show_prop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="mshreader.add_list_input_descriptions">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">add_list_input_descriptions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#add_list_input_descriptions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.add_list_input_descriptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.is_valid_add_args">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">is_valid_add_args</code><span class="sig-paren">(</span><em class="sig-param">add_args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#is_valid_add_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.is_valid_add_args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.is_valid_label_args">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">is_valid_label_args</code><span class="sig-paren">(</span><em class="sig-param">label_args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#is_valid_label_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.is_valid_label_args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.main">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.main" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.nodal_label_input_descriptions">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">nodal_label_input_descriptions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#nodal_label_input_descriptions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.nodal_label_input_descriptions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.option_add">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">option_add</code><span class="sig-paren">(</span><em class="sig-param">mesh</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#option_add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.option_add" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.option_clear">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">option_clear</code><span class="sig-paren">(</span><em class="sig-param">mesh</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#option_clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.option_clear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="mshreader.option_save">
+<code class="sig-prename descclassname">mshreader.</code><code class="sig-name descname">option_save</code><span class="sig-paren">(</span><em class="sig-param">mesh</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mshreader.html#option_save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mshreader.option_save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Basicfem</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="basicfem.html">basicfem – main script</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lib.html">lib – library for basicfem solver</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">mshreader – interface for reading Gmsh files</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="lib.html" title="previous chapter">lib – library for basicfem solver</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Kuen-Hsiang Chen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/source_rst/mshreader.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
