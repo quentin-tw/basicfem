@@ -24,6 +24,10 @@ author = 'Kuen-Hsiang Chen'
 # The full version, including alpha/beta/rc tags
 release = '0.1.0'
 
+# Required by ReadTheDoc deploy.
+# https://github.com/readthedocs/readthedocs.org/issues/2569
+master_doc = 'index'
+
 
 # -- General configuration ---------------------------------------------------
 
