@@ -484,7 +484,7 @@ class FrameSolver2D(TrussSolver2D):
             interpolation_pts[i,1] = self.get_beam_deflection(
                         x, L, element_index, beam_nodal_disp) * scale_factor
             interpolation_pts[i,:] = transform_2d.T @ interpolation_pts[i,0:2]\
-                        + self.get_first_nodal_position(element_index)
+                        + self._get_first_nodal_position(element_index)
         return interpolation_pts
 
     
