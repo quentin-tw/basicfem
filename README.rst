@@ -1,4 +1,4 @@
-basicfem
+Basicfem
 ========
 
 basicfem is a finite element solver library in Python for 2D trusses, frames, 
@@ -14,7 +14,14 @@ https://basicfem.readthedocs.io
 Quick Start
 -----------
 
-A simple example of vertical 2D plate under a point load is as follows.
+To use the code, clone the repository in your local directory::
+
+    git clone https://github.com/quentin-tw/basicfem.git
+
+You might need to set up virtual environment if you are not using Anaconda.
+You might use ``requirements.txt`` for your venv set up.
+
+A simple example of vertical 2D plate under a point load is as follows:
 
 .. image:: ./input_examples/03_vertical_plate/config_pic.png
     :width: 200
@@ -36,7 +43,7 @@ of the input folder.
 .. image:: ./output_examples/03_vertical_plate/contour_plot_sigma_yy.png
     :width: 400
 
-We can also use an .xlsx file to replace the input directory as follows ::
+We can also use an xlsx file to replace the input directory as follows ::
 
     python basicfem.py input_examples/03_vertical_plate.xlsx output_example/03_vertical_plate
 
