@@ -62,7 +62,7 @@ def plot_deformed_shape_1D(fem_result, scale_factor, output_dir_path,
         'Deformed Shape (Red), Scale Factor : {:.2f}'.format(scale_factor),
     }   
     ax.set(**myAxSetting)
-    plt.savefig(output_dir_path + '/deformaion_plot.png')
+    plt.savefig(output_dir_path + '/deformation_plot.png')
 
 def _plot_undeformed_element(sol_in, element_index, ax, line_str):
     """ Plot a single undeformed 1D element. 
@@ -282,7 +282,7 @@ def _show_overlap(nodes, nodes2, elements, titleStr, output_dir_path):
     ax.set_aspect('equal')
     pc2 = quatplot(y,z,y2,z2, np.asarray(elements), ax=ax) 
     ax.set(title=titleStr, xlabel='X', ylabel='Y')
-    plt.savefig(output_dir_path + '/deformaion_plot.png')
+    plt.savefig(output_dir_path + '/deformation_plot.png')
 
 
 def plot_deformation_shape_2D(nodal_data, element_data, 
